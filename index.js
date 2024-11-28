@@ -12,25 +12,21 @@ const telegramApiUrl = `https://api.telegram.org/bot${token}/`;
 app.use(express.json());
 
 // Webhook endpoint untuk menerima pembaruan Telegram
-app.post('/webhook', async (req, res) => {
+app.post(`/webhook/${token}`, async (req, res) => {
   const update = req.body;
 
-  if (!update.message) {
-    return res.sendStatus(200); // Jika tidak ada pesan, tidak perlu diproses lebih lanjut
+  // Pastikan ada pesan dalam update dan periksa jika itu perintah /start
+  if (update.message && update.message.text === '/start') {
+    const chatId = update.message.chat.id;
+    await sendMessage(chatId, 'Hallo pelajar, silahkan kirim foto pelajaran kamu!');
   }
 
-  const chatId = update.message.chat.id;
+  // Periksa jika ada pesan dengan gambar
+  if (update.message && update.message.photo) {
+    const chatId = update.message.chat.id;
+    const fileId = update.message.photo[update.message.photo.length - 1].file_id;
 
-  try {
-    // Periksa jika itu perintah /start
-    if (update.message.text === '/start') {
-      await sendMessage(chatId, 'Hallo pelajar, silahkan kirim foto pelajaran kamu!');
-    }
-
-    // Periksa jika ada pesan dengan gambar
-    if (update.message.photo) {
-      const fileId = update.message.photo[update.message.photo.length - 1].file_id;
-
+    try {
       // Kirim pesan "Sebentar, foto soal kamu sedang diproses mencari jawaban..."
       await sendMessage(chatId, 'Sebentar, foto soal kamu sedang diproses mencari jawaban...');
 
@@ -67,16 +63,14 @@ app.post('/webhook', async (req, res) => {
       } else {
         await sendMessage(chatId, 'Terjadi kesalahan saat mengirim gambar ke API roast.');
       }
+    } catch (error) {
+      console.error('Error:', error);
+      await sendMessage(chatId, 'Gagal mengirim gambar ke API.');
     }
-
-    // Mengirimkan status OK untuk webhook Telegram
-    res.sendStatus(200);
-
-  } catch (error) {
-    console.error('Error:', error);
-    await sendMessage(chatId, 'Terjadi kesalahan dalam memproses permintaan.');
-    res.sendStatus(500);
   }
+
+  // Mengirimkan status OK untuk webhook Telegram
+  res.sendStatus(200);
 });
 
 // Fungsi untuk mendapatkan URL gambar dari Telegram
@@ -105,9 +99,9 @@ function generateRandomFilename() {
   return 'id_' + Math.random().toString(36).substr(2, 9) + '.jpeg'; // Nama file acak
 }
 
-// Menyusun Webhook Telegram
+// Mengatur webhook untuk bot Telegram
 async function setWebhook() {
-  const url = `https://nitahbot.vercel.app/webhook`;  // Pastikan URL yang benar
+  const url = `https://nitahbot.vercel.app/webhook/${token}`;  // Gantilah dengan URL endpoint webhook Anda
   try {
     const response = await fetch(`${telegramApiUrl}setWebhook?url=${url}`);
     const result = await response.json();
