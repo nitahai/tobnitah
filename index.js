@@ -3,7 +3,7 @@ const fetch = require('node-fetch');
 const FormData = require('form-data');
 const app = express();
 
-const token = '7580171291:AAFAD8UG0xhCVkfih4j072CEwvR_YCXlnhw'; // Ganti dengan token bot kamu
+const token = '8073266001:AAGq_Vmmpa0UWwoSLDKOkiRvxGK4dwd4uaA'; // Ganti dengan token bot kamu
 const telegramApiUrl = `https://api.telegram.org/bot${token}/`;
 
 // Flag untuk memastikan hanya satu proses pengiriman dalam satu waktu
@@ -57,14 +57,20 @@ app.post(`/webhook/${token}`, async (req, res) => {
           headers: form.getHeaders(),
         });
 
-        const apiResult = await apiResponse.json();
-
-        // Kirim pesan untuk memberitahukan bahwa gambar sedang diproses
-        if (apiResult.ok) {
-          await sendMessage(chatId, 'Sebentar, foto soal kamu sedang diproses mencari jawaban...');
-          await sendMessage(chatId, apiResult.text || 'Gambar berhasil diproses!');
+        if (apiResponse.status === 504) {
+          // Menangani kesalahan 504 Gateway Timeout
+          await sendMessage(chatId, 'Terjadi kesalahan pada server, tidak dapat menghubungi asisten untuk memproses gambar. Bot akan mencoba lagi setelah beberapa saat.');
+          await sendPhoto(chatId, 'https://img-9gag-fun.9cache.com/photo/ayNeMQb_460swp.webp'); // Ganti dengan URL gambar default jika diperlukan
         } else {
-          await sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
+          const apiResult = await apiResponse.json();
+          
+          // Kirim pesan untuk memberitahukan bahwa gambar sedang diproses
+          if (apiResult.ok) {
+            await sendMessage(chatId, 'Sebentar, foto soal kamu sedang diproses mencari jawaban...');
+            await sendMessage(chatId, apiResult.text || 'Gambar berhasil diproses!');
+          } else {
+            await sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
+          }
         }
       } catch (error) {
         console.error('Error:', error);
@@ -88,6 +94,15 @@ async function sendMessage(chatId, text) {
   await fetch(`${telegramApiUrl}sendMessage`, {
     method: 'POST',
     body: JSON.stringify({ chat_id: chatId, text }),
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+// Fungsi untuk mengirim foto ke Telegram
+async function sendPhoto(chatId, photoUrl) {
+  await fetch(`${telegramApiUrl}sendPhoto`, {
+    method: 'POST',
+    body: JSON.stringify({ chat_id: chatId, photo: photoUrl }),
     headers: { 'Content-Type': 'application/json' },
   });
 }
