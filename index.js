@@ -3,7 +3,7 @@ const fetch = require('node-fetch');
 const FormData = require('form-data');
 const app = express();
 
-const token = '7580171291:AAFAD8UG0xhCVkfih4j072CEwvR_YCXlnhw';
+const token = '7580171291:AAFAD8UG0xhCVkfih4j072CEwvR_YCXlnhw'; // Ganti dengan token bot kamu
 const telegramApiUrl = `https://api.telegram.org/bot${token}/`;
 
 // Flag untuk memastikan hanya satu proses pengiriman dalam satu waktu
@@ -19,7 +19,17 @@ app.post(`/webhook/${token}`, async (req, res) => {
 
     // Jika pesan teks adalah "/start"
     if (update.message.text === '/start') {
-      await sendMessage(chatId, 'Hallo pelajar, silahkan kirim foto pelajaran kamu!');
+      await sendMessage(chatId, 'Hallo pelajar, selamat datang di bot Nitah! Silahkan kirim foto pelajaran kamu');
+    }
+
+    // Jika pesan teks adalah "/informasi"
+    if (update.message.text === '/informasi') {
+      await sendMessage(chatId, 'Bot ini dapat membantu memproses gambar soal kamu untuk mencari jawaban. Cukup kirim gambar soalmu!');
+    }
+
+    // Jika pesan teks adalah "/tentang"
+    if (update.message.text === '/tentang') {
+      await sendMessage(chatId, 'Bot ini dibuat oleh tim Nitah untuk membantu pelajar dalam belajar. Nikmati fitur kami!');
     }
 
     // Jika ada pesan dengan gambar
@@ -99,7 +109,7 @@ function generateRandomFilename() {
 
 // Fungsi untuk mengatur webhook Telegram
 async function setWebhook() {
-  const url = `https://nitahbot.vercel.app/webhook/${token}`;
+  const url = `https://nitahbot.vercel.app/webhook/${token}`; // Ganti dengan domain Vercel kamu
   try {
     const response = await fetch(`${telegramApiUrl}setWebhook?url=${url}`);
     const result = await response.json();
