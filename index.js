@@ -30,7 +30,7 @@ if (update.message.text === '/informasi') {
   // Jika pesan teks adalah "/tentang"
 if (update.message.text === '/tentang') {
   await sendMessage(chatId, 'Bot Nitah ini dibuat oleh zakia dengan tujuan untuk membantu pelajar dalam menyelesaikan soal pelajaran secara cepat dan tepat. Cukup kirimkan foto soal, dan bot nitah akan mencari jawaban untuk kamu.\n\n' +
-                            'Untuk informasi lebih lanjut, kunjungi situs kami:🌐 https://nitah.web.id\n' +
+                            'Untuk informasi lebih lanjut, kunjungi situs kami: 🌐 https://nitah.web.id\n' +
                             'Dukung kami melalui: ✨ https://saweria.co/zakiakaidzan');
 }
 
