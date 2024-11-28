@@ -1,11 +1,14 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
 const express = require('express');
 const fetch = require('node-fetch');
 const FormData = require('form-data');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Ganti dengan token bot Telegram Anda yang baru
-const token = '7799759103:AAEn03hiwvEVBmG7_2H11t4eC3JFS78v-DU';
+// Ganti dengan token bot Telegram yang disimpan di .env
+const token = process.env.TELEGRAM_BOT_TOKEN;
 const telegramApiUrl = `https://api.telegram.org/bot${token}/`;
 
 // Fungsi untuk menangani webhook Telegram
