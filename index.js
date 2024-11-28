@@ -19,7 +19,7 @@ app.post(`/webhook/${token}`, async (req, res) => {
 
     // Jika pesan teks adalah "/start"
     if (update.message.text === '/start') {
-      await sendMessage(chatId, 'Hallo pelajar, selamat datang di bot Nitah! Silahkan kirim foto soal pelajaran sekolah kamu');
+      await sendMessage(chatId, 'Hallo pelajar, Selamat datang di bot Nitah! Silahkan kirim foto soal pelajaran sekolah kamu');
     }
 
 // Jika pesan teks adalah "/informasi"
@@ -29,9 +29,9 @@ if (update.message.text === '/informasi') {
 
   // Jika pesan teks adalah "/tentang"
 if (update.message.text === '/tentang') {
-  await sendMessage(chatId, 'Bot Nitah ini dibuat oleh zakia dengan tujuan untuk membantu pelajar dalam memahami dan mempelajari materi pelajaran. Nikmati kemudahan menggunakan bot ini untuk memecahkan soal pelajaran sekolah kamu dengan cepat dan tepat!\n\n' +
-                            'Untuk informasi lebih lanjut, kunjungi situs kami: [https://nitah.web.id](https://nitah.web.id)\n' +
-                            'Dukung kami melalui: [Saweria](https://saweria.co/zakiakaidzan)');
+  await sendMessage(chatId, 'Bot Nitah ini dibuat oleh zakia dengan tujuan untuk membantu pelajar dalam menyelesaikan soal pelajaran secara cepat dan tepat. Cukup kirimkan foto soal, dan bot nitah akan mencari jawaban untuk kamu.\n\n' +
+                            'Untuk informasi lebih lanjut, kunjungi situs kami: **Nitah Asisten Pintar** https://nitah.web.id\n' +
+                            'Dukung kami melalui: **Saweria** https://saweria.co/zakiakaidzan');
 }
 
     // Jika ada pesan dengan gambar
