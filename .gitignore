@@ -1,0 +1,24 @@
+# Node modules
+/node_modules/
+
+# Logs
+*.log
+logs/
+
+# Dependency directories
+/.pnp/
+.pnp.js
+
+# Vercel build directories
+/.vercel/
+
+# Environment variables
+.env
+
+# NPM package lock file
+package-lock.json
+
+# Debug files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

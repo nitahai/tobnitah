@@ -1,0 +1,19 @@
+{
+  "name": "telegram-bot-vercel",
+  "version": "1.0.0",
+  "description": "A Telegram bot integrated with an API for processing images.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "node-fetch": "^2.6.7",
+    "form-data": "^3.0.0"
+  },
+  "engines": {
+    "node": "18.x"
+  },
+  "author": "",
+  "license": "ISC"
+}
