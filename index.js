@@ -22,35 +22,17 @@ app.post(`/webhook/${token}`, async (req, res) => {
       await sendMessage(chatId, '👋 Hallo pelajar, Selamat datang di bot Nitah! Silahkan kirim foto soal pelajaran sekolah kamu');
     }
 
-    // Jika pesan teks adalah "/informasi"
-    if (update.message.text === '/informasi') {
-      await sendMessage(
-        chatId,
-        'Bot Nitah ini dirancang untuk membantu memproses gambar soal pelajaran sekolah kamu dan mencari jawaban dengan cepat. Cukup kirimkan gambar soalmu, dan Nitah akan memperoses untuk memberikan jawaban yang cepat dan tepat!'
-      );
-    }
+// Jika pesan teks adalah "/informasi"
+if (update.message.text === '/informasi') {
+  await sendMessage(chatId, 'Bot Nitah ini dirancang untuk membantu memproses gambar soal pelajaran sekolah kamu dan mencari jawaban dengan cepat. Cukup kirimkan gambar soalmu, dan Nitah akan memperoses untuk memberikan jawaban yang cepat dan tepat!');
+}
 
-    // Jika pesan teks adalah "/tentang"
-    if (update.message.text === '/tentang') {
-      await sendMessage(
-        chatId,
-        'Bot Nitah ini dibuat oleh zakia dengan tujuan untuk membantu pelajar dalam menyelesaikan soal pelajaran secara cepat dan tepat. Cukup kirimkan foto soal, dan bot nitah akan mencari jawaban untuk kamu.\n\n' +
-          'Untuk informasi lebih lanjut, kunjungi situs kami: 🌐 https://nitah.web.id\n' +
-          'Dukung kami melalui: ✨ https://saweria.co/zakiakaidzan'
-      );
-    }
-
-    // Jika pesan teks adalah "/clear"
-    if (update.message.text === '/clear') {
-      if (processingChats.has(chatId)) {
-        // Hentikan proses pengiriman terakhir
-        processingChats.delete(chatId);
-        await sendMessage(chatId, '✅ Pesan terakhir telah dihentikan. Tidak ada pending lagi.');
-      } else {
-        await sendMessage(chatId, '⚠️ Tidak ada proses yang sedang berjalan.');
-      }
-      return res.sendStatus(200);
-    }
+  // Jika pesan teks adalah "/tentang"
+if (update.message.text === '/tentang') {
+  await sendMessage(chatId, 'Bot Nitah ini dibuat oleh zakia dengan tujuan untuk membantu pelajar dalam menyelesaikan soal pelajaran secara cepat dan tepat. Cukup kirimkan foto soal, dan bot nitah akan mencari jawaban untuk kamu.\n\n' +
+                            'Untuk informasi lebih lanjut, kunjungi situs kami: 🌐 https://nitah.web.id\n' +
+                            'Dukung kami melalui: ✨ https://saweria.co/zakiakaidzan');
+}
 
     // Jika ada pesan dengan gambar
     if (update.message.photo) {
@@ -64,7 +46,7 @@ app.post(`/webhook/${token}`, async (req, res) => {
       processingChats.add(chatId);
 
       try {
-        // Kirim pesan awal
+        // Kirim pesan sekali
         await sendMessage(chatId, 'Sebentar, foto soal kamu sedang diproses mencari jawaban...');
 
         const fileId = update.message.photo[update.message.photo.length - 1].file_id;
@@ -86,16 +68,9 @@ app.post(`/webhook/${token}`, async (req, res) => {
           headers: form.getHeaders(),
         });
 
-        // Jika API mengembalikan 504, hentikan pengiriman pesan
-        if (apiResponse.status === 504) {
-          console.error('Error 504: Gateway Timeout');
-          await sendMessage(chatId, 'Gagal memproses gambar karena server timeout. Proses dihentikan.');
+        const apiResult = await apiResponse.json();
 
-          // Hapus tanda chat dari processingChats
-          processingChats.delete(chatId);
-          return res.sendStatus(200); // Menghentikan pengolahan lebih lanjut
-        } else if (apiResponse.ok) {
-          const apiResult = await apiResponse.json();
+        if (apiResult.ok) {
           await sendMessage(chatId, apiResult.text || 'Gambar berhasil diproses!');
         } else {
           await sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
@@ -104,7 +79,7 @@ app.post(`/webhook/${token}`, async (req, res) => {
         console.error('Error:', error);
         await sendMessage(chatId, 'Gagal memproses gambar.');
       } finally {
-        // Hapus tanda chat dari processingChats setelah selesai
+        // Hapus tanda chat dari processingChats
         processingChats.delete(chatId);
       }
     }
@@ -152,4 +127,4 @@ async function setWebhook() {
 
 setWebhook();
 
-module.exports = app; // Ekspor app untuk Vercel jika respon api asisten nya 504
+module.exports = app; // Ekspor app untuk Vercel
