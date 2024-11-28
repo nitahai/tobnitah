@@ -1,17 +1,23 @@
 {
   "name": "telegram-bot",
   "version": "1.0.0",
-  "description": "Telegram Bot to forward images to an API",
+  "description": "Telegram bot untuk mengirim gambar ke API",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "deploy": "vercel --prod"
   },
   "dependencies": {
-    "node-fetch": "^2.6.7",
-    "telegraf": "^4.10.0",
-    "dotenv": "^16.0.0"
+    "telegraf": "^4.8.0",
+    "node-fetch": "^3.2.10",
+    "form-data": "^4.0.0",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.0.3"
   },
   "engines": {
     "node": "16.x"
-  }
+  },
+  "devDependencies": {},
+  "author": "",
+  "license": "ISC"
 }
