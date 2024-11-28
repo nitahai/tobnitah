@@ -19,18 +19,35 @@ app.post(`/webhook/${token}`, async (req, res) => {
 
     // Jika pesan teks adalah "/start"
     if (update.message.text === '/start') {
-      await sendMessage(chatId, 'Hallo pelajar, selamat datang di bot Nitah! Silahkan kirim foto pelajaran kamu');
+      await sendMessage(chatId, 'Hallo pelajar, selamat datang di bot Nitah! Silahkan kirim foto soal pelajaran sekolah kamu');
     }
 
     // Jika pesan teks adalah "/informasi"
-    if (update.message.text === '/informasi') {
-      await sendMessage(chatId, 'Bot ini dapat membantu memproses gambar soal kamu untuk mencari jawaban. Cukup kirim gambar soalmu!');
-    }
+if (update.message.text === '/informasi') {
+  await sendMessage(chatId, 'Bot ini dapat membantu memproses gambar soal kamu untuk mencari soal jawaban sekolah mu. Cukup kirim gambar soalmu!');
+}
 
-    // Jika pesan teks adalah "/tentang"
-    if (update.message.text === '/tentang') {
-      await sendMessage(chatId, 'Bot ini dibuat oleh tim Nitah untuk membantu pelajar dalam belajar. Nikmati fitur kami!');
-    }
+// Jika pesan teks adalah "/tentang"
+if (update.message.text === '/tentang') {
+  const messageText = 'Bot ini dibuat oleh zakia untuk membantu pelajar dalam belajar. Nikmati fitur kami ini gratis!';
+  const keyboard = {
+    inline_keyboard: [
+      [
+        {
+          text: 'Kunjungi Website',
+          url: 'https://nitah.web.id',
+        },
+        {
+          text: 'Dukung di Saweria',
+          url: 'https://saweria.com/zakikaidzan',
+        },
+      ],
+    ],
+  };
+
+  // Mengirim pesan dengan tombol inline URL
+  await sendMessage(chatId, messageText, keyboard);
+}
 
     // Jika ada pesan dengan gambar
     if (update.message.photo) {
