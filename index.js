@@ -43,7 +43,7 @@ app.post(`/webhook/${token}`, async (req, res) => {
       const randomFilename = generateRandomFilename();
 
       // Kirim gambar ke API roast
-      const apiUrl = 'https://nitah.vercel.app/roast';
+      const apiUrl = 'https://nitahai.vercel.app/asisten';
       const form = new FormData();
       form.append('file', buffer, {
         filename: randomFilename,
