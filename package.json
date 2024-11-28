@@ -1,23 +1,36 @@
 {
-  "name": "telegram-bot",
+  "name": "telegram-bot-webhook",
   "version": "1.0.0",
-  "description": "Telegram bot untuk mengirim gambar ke API",
+  "description": "Telegram bot with webhook integration on Vercel",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "deploy": "vercel --prod"
+    "start": "node index.js"
   },
   "dependencies": {
+    "express": "^4.18.2",
     "telegraf": "^4.8.0",
-    "node-fetch": "^3.2.10",
-    "form-data": "^4.0.0",
-    "crypto": "^1.0.1",
-    "dotenv": "^16.0.3"
+    "node-fetch": "^3.2.1",
+    "form-data": "^4.0.0"
   },
   "engines": {
     "node": "16.x"
   },
   "devDependencies": {},
-  "author": "",
-  "license": "ISC"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/username/repository.git"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "webhook",
+    "vercel",
+    "nodejs"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/username/repository/issues"
+  },
+  "homepage": "https://github.com/username/repository#readme"
 }
