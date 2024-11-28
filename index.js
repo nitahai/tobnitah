@@ -24,12 +24,12 @@ app.post(`/webhook/${token}`, async (req, res) => {
 
 // Jika pesan teks adalah "/informasi"
 if (update.message.text === '/informasi') {
-  await sendMessage(chatId, 'Bot Nitah ini dirancang untuk membantu memproses gambar soal pelajaran kamu dan mencari jawaban dengan cepat. Cukup kirimkan gambar soalmu, dan Nitah akan memperoses untuk memberikan jawaban yang cepat dan tepat!');
+  await sendMessage(chatId, 'Bot Nitah ini dirancang untuk membantu memproses gambar soal pelajaran sekolah kamu dan mencari jawaban dengan cepat. Cukup kirimkan gambar soalmu, dan Nitah akan memperoses untuk memberikan jawaban yang cepat dan tepat!');
 }
 
   // Jika pesan teks adalah "/tentang"
 if (update.message.text === '/tentang') {
-  await sendMessage(chatId, 'Bot ini dibuat oleh zakia dengan tujuan untuk membantu pelajar dalam memahami dan mempelajari materi pelajaran. Nikmati kemudahan menggunakan bot ini untuk memecahkan soal pelajaran kamu dengan cepat dan tepat!\n\n' +
+  await sendMessage(chatId, 'Bot Nitah ini dibuat oleh zakia dengan tujuan untuk membantu pelajar dalam memahami dan mempelajari materi pelajaran. Nikmati kemudahan menggunakan bot ini untuk memecahkan soal pelajaran sekolah kamu dengan cepat dan tepat!\n\n' +
                             'Untuk informasi lebih lanjut, kunjungi situs kami: [https://nitah.web.id](https://nitah.web.id)\n' +
                             'Dukung kami melalui: [Saweria](https://saweria.co/zakiakaidzan)');
 }
