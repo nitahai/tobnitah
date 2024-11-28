@@ -1,38 +1,39 @@
 const { Telegraf } = require('telegraf');
-const fetch = require('node-fetch');
-const { TELEGRAM_TOKEN } = process.env;
+require('dotenv').config();
 
-// Membuat bot dengan token
-const bot = new Telegraf(TELEGRAM_TOKEN);
+const bot = new Telegraf(process.env.TELEGRAM_TOKEN);
 
-// Handler ketika bot baru dimulai dengan /start
+// Menanggapi perintah /start
 bot.start((ctx) => {
-  ctx.reply('Hallo pelajar, silahkan upload foto soal oelajaran kamu');
+  ctx.reply('Hallo pelajar, silahkan upload foto soal oalahan kamu');
 });
 
-// Handler ketika bot menerima gambar
-bot.on('photo', async (ctx) => {
-  const fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
-  const fileUrl = await ctx.telegram.getFileLink(fileId);
+// Menangani gambar yang dikirim
+bot.on('photo', (ctx) => {
+  const photo = ctx.message.photo;
+  const file_id = photo[photo.length - 1].file_id;
   
-  // Mengirim gambar ke API
-  const response = await fetch('https://nitahai.vercel.app/asisten', {
+  // Kirim file gambar ke API asisten
+  fetch('https://nitahai.vercel.app/asisten', {
     method: 'POST',
-    body: JSON.stringify({ file: fileUrl }),
-    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file: file_id }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.ok) {
+      const text = data.text;
+      ctx.reply(text);
+    } else {
+      ctx.reply('Terjadi kesalahan saat mengirim gambar.');
+    }
+  })
+  .catch(error => {
+    ctx.reply('Terjadi kesalahan koneksi.');
   });
-
-  const data = await response.json();
-  
-  // Mengirimkan text yang diterima dari API ke pengguna
-  if (data.ok) {
-    ctx.reply(data.text);
-  } else {
-    ctx.reply('Ada kesalahan saat mengirimkan gambar ke API.');
-  }
 });
 
-// Memulai bot
-bot.launch().then(() => {
-  console.log('Bot is running...');
-});
+// Mulai bot
+bot.launch();
