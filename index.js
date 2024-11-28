@@ -7,8 +7,6 @@ const token = '7580171291:AAFAD8UG0xhCVkfih4j072CEwvR_YCXlnhw'; // Ganti dengan 
 const telegramApiUrl = `https://api.telegram.org/bot${token}/`;
 
 // Flag untuk memastikan hanya satu proses pengiriman dalam satu waktu
-const processingChats = new Set();
-
 app.use(express.json());
 
 app.post(`/webhook/${token}`, async (req, res) => {
@@ -22,39 +20,30 @@ app.post(`/webhook/${token}`, async (req, res) => {
       await sendMessage(chatId, '👋 Hallo pelajar, Selamat datang di bot Nitah! Silahkan kirim foto soal pelajaran sekolah kamu');
     }
 
-// Jika pesan teks adalah "/informasi"
-if (update.message.text === '/informasi') {
-  await sendMessage(chatId, 'Bot Nitah ini dirancang untuk membantu memproses gambar soal pelajaran sekolah kamu dan mencari jawaban dengan cepat. Cukup kirimkan gambar soalmu, dan Nitah akan memperoses untuk memberikan jawaban yang cepat dan tepat!');
-}
+    // Jika pesan teks adalah "/informasi"
+    if (update.message.text === '/informasi') {
+      await sendMessage(chatId, 'Bot Nitah ini dirancang untuk membantu memproses gambar soal pelajaran sekolah kamu dan mencari jawaban dengan cepat. Cukup kirimkan gambar soalmu, dan Nitah akan memperoses untuk memberikan jawaban yang cepat dan tepat!');
+    }
 
-  // Jika pesan teks adalah "/tentang"
-if (update.message.text === '/tentang') {
-  await sendMessage(chatId, 'Bot Nitah ini dibuat oleh zakia dengan tujuan untuk membantu pelajar dalam menyelesaikan soal pelajaran secara cepat dan tepat. Cukup kirimkan foto soal, dan bot nitah akan mencari jawaban untuk kamu.\n\n' +
-                            'Untuk informasi lebih lanjut, kunjungi situs kami: 🌐 https://nitah.web.id\n' +
-                            'Dukung kami melalui: ✨ https://saweria.co/zakiakaidzan');
-}
+    // Jika pesan teks adalah "/tentang"
+    if (update.message.text === '/tentang') {
+      await sendMessage(chatId, 'Bot Nitah ini dibuat oleh zakia dengan tujuan untuk membantu pelajar dalam menyelesaikan soal pelajaran secara cepat dan tepat. Cukup kirimkan foto soal, dan bot nitah akan mencari jawaban untuk kamu.\n\n' +
+        'Untuk informasi lebih lanjut, kunjungi situs kami: 🌐 https://nitah.web.id\n' +
+        'Dukung kami melalui: ✨ https://saweria.co/zakiakaidzan');
+    }
 
     // Jika ada pesan dengan gambar
     if (update.message.photo) {
-      // Cek apakah chat sedang diproses
-      if (processingChats.has(chatId)) {
-        console.log(`Chat ID ${chatId} sedang diproses, abaikan pengiriman ulang.`);
-        return res.sendStatus(200);
-      }
-
-      // Tandai chat sedang diproses
-      processingChats.add(chatId);
-
       try {
-        // Kirim pesan sekali
-        await sendMessage(chatId, 'Sebentar, foto soal kamu sedang diproses mencari jawaban...');
-
+        // Dapatkan file_id gambar yang dikirim
         const fileId = update.message.photo[update.message.photo.length - 1].file_id;
         const fileUrl = await getTelegramFileUrl(fileId);
 
+        // Ambil gambar dari Telegram
         const buffer = await fetch(fileUrl).then(res => res.buffer());
         const randomFilename = generateRandomFilename();
 
+        // Persiapkan form-data untuk kirim gambar
         const form = new FormData();
         form.append('file', buffer, {
           filename: randomFilename,
@@ -70,7 +59,9 @@ if (update.message.text === '/tentang') {
 
         const apiResult = await apiResponse.json();
 
+        // Kirim pesan untuk memberitahukan bahwa gambar sedang diproses
         if (apiResult.ok) {
+          await sendMessage(chatId, 'Sebentar, foto soal kamu sedang diproses mencari jawaban...');
           await sendMessage(chatId, apiResult.text || 'Gambar berhasil diproses!');
         } else {
           await sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
@@ -78,9 +69,6 @@ if (update.message.text === '/tentang') {
       } catch (error) {
         console.error('Error:', error);
         await sendMessage(chatId, 'Gagal memproses gambar.');
-      } finally {
-        // Hapus tanda chat dari processingChats
-        processingChats.delete(chatId);
       }
     }
   }
