@@ -22,17 +22,23 @@ app.post(`/webhook/${token}`, async (req, res) => {
       await sendMessage(chatId, '👋 Hallo pelajar, Selamat datang di bot Nitah! Silahkan kirim foto soal pelajaran sekolah kamu');
     }
 
-// Jika pesan teks adalah "/informasi"
-if (update.message.text === '/informasi') {
-  await sendMessage(chatId, 'Bot Nitah ini dirancang untuk membantu memproses gambar soal pelajaran sekolah kamu dan mencari jawaban dengan cepat. Cukup kirimkan gambar soalmu, dan Nitah akan memperoses untuk memberikan jawaban yang cepat dan tepat!');
-}
+    // Jika pesan teks adalah "/informasi"
+    if (update.message.text === '/informasi') {
+      await sendMessage(
+        chatId,
+        'Bot Nitah ini dirancang untuk membantu memproses gambar soal pelajaran sekolah kamu dan mencari jawaban dengan cepat. Cukup kirimkan gambar soalmu, dan Nitah akan memperoses untuk memberikan jawaban yang cepat dan tepat!'
+      );
+    }
 
-  // Jika pesan teks adalah "/tentang"
-if (update.message.text === '/tentang') {
-  await sendMessage(chatId, 'Bot Nitah ini dibuat oleh zakia dengan tujuan untuk membantu pelajar dalam menyelesaikan soal pelajaran secara cepat dan tepat. Cukup kirimkan foto soal, dan bot nitah akan mencari jawaban untuk kamu.\n\n' +
-                            'Untuk informasi lebih lanjut, kunjungi situs kami: 🌐 https://nitah.web.id\n' +
-                            'Dukung kami melalui: ✨ https://saweria.co/zakiakaidzan');
-}
+    // Jika pesan teks adalah "/tentang"
+    if (update.message.text === '/tentang') {
+      await sendMessage(
+        chatId,
+        'Bot Nitah ini dibuat oleh zakia dengan tujuan untuk membantu pelajar dalam menyelesaikan soal pelajaran secara cepat dan tepat. Cukup kirimkan foto soal, dan bot nitah akan mencari jawaban untuk kamu.\n\n' +
+          'Untuk informasi lebih lanjut, kunjungi situs kami: 🌐 https://nitah.web.id\n' +
+          'Dukung kami melalui: ✨ https://saweria.co/zakiakaidzan'
+      );
+    }
 
     // Jika ada pesan dengan gambar
     if (update.message.photo) {
@@ -46,7 +52,7 @@ if (update.message.text === '/tentang') {
       processingChats.add(chatId);
 
       try {
-        // Kirim pesan sekali
+        // Kirim pesan awal
         await sendMessage(chatId, 'Sebentar, foto soal kamu sedang diproses mencari jawaban...');
 
         const fileId = update.message.photo[update.message.photo.length - 1].file_id;
@@ -68,9 +74,12 @@ if (update.message.text === '/tentang') {
           headers: form.getHeaders(),
         });
 
-        const apiResult = await apiResponse.json();
-
-        if (apiResult.ok) {
+        if (apiResponse.status === 504) {
+          // Jika API mengembalikan 504, beritahu pengguna
+          console.error('Error 504: Gateway Timeout');
+          await sendMessage(chatId, 'Gagal memproses gambar. Silakan kirim foto soal yang lain.');
+        } else if (apiResponse.ok) {
+          const apiResult = await apiResponse.json();
           await sendMessage(chatId, apiResult.text || 'Gambar berhasil diproses!');
         } else {
           await sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
@@ -127,4 +136,4 @@ async function setWebhook() {
 
 setWebhook();
 
-module.exports = app; // Ekspor app untuk Vercel
+module.exports = app;
