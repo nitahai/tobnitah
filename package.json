@@ -1,19 +1,17 @@
 {
-  "name": "telegram-bot-vercel",
+  "name": "telegram-bot",
   "version": "1.0.0",
-  "description": "A Telegram bot integrated with an API for processing images.",
+  "description": "Telegram Bot to forward images to an API",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "express": "^4.17.1",
     "node-fetch": "^2.6.7",
-    "form-data": "^3.0.0"
+    "telegraf": "^4.10.0",
+    "dotenv": "^16.0.0"
   },
   "engines": {
-    "node": "18.x"
-  },
-  "author": "",
-  "license": "ISC"
+    "node": "16.x"
+  }
 }
