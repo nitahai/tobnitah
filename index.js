@@ -3,7 +3,9 @@ const fetch = require('node-fetch');
 const FormData = require('form-data');
 const app = express();
 
-// Ganti dengan token bot Telegram Anda yang baru
+const processingChats = new Map(); // Menyimpan status pemrosesan setiap chat
+
+// Ganti dengan token bot Telegram Anda
 const token = '7580171291:AAFAD8UG0xhCVkfih4j072CEwvR_YCXlnhw';
 const telegramApiUrl = `https://api.telegram.org/bot${token}/`;
 
@@ -23,6 +25,16 @@ app.post(`/webhook/${token}`, async (req, res) => {
   // Periksa jika ada pesan dengan gambar
   if (update.message && update.message.photo) {
     const chatId = update.message.chat.id;
+
+    // Cek apakah sudah ada proses berjalan untuk chat ini
+    if (processingChats.has(chatId)) {
+      res.sendStatus(200); // Jika ada, langsung akhiri proses webhook ini
+      return;
+    }
+
+    // Tandai bahwa chat ini sedang diproses
+    processingChats.set(chatId, true);
+
     const fileId = update.message.photo[update.message.photo.length - 1].file_id;
 
     try {
@@ -65,6 +77,9 @@ app.post(`/webhook/${token}`, async (req, res) => {
     } catch (error) {
       console.error('Error:', error);
       await sendMessage(chatId, 'Gagal mengirim gambar ke API.');
+    } finally {
+      // Hapus chat dari status pemrosesan
+      processingChats.delete(chatId);
     }
   }
 
@@ -100,7 +115,7 @@ function generateRandomFilename() {
 
 // Mengatur webhook untuk bot Telegram
 async function setWebhook() {
-  const url = `https://nitahbot.vercel.app/webhook/${token}`;  // Gantilah dengan URL endpoint webhook Anda
+  const url = `https://nitahbot.vercel.app/webhook/${token}`; // Gantilah dengan URL endpoint webhook Anda
   try {
     const response = await fetch(`${telegramApiUrl}setWebhook?url=${url}`);
     const result = await response.json();
@@ -117,7 +132,4 @@ async function setWebhook() {
 // Menyusun Webhook Telegram
 setWebhook();
 
-// Menjalankan server
-app.listen(3000, () => {
-  console.log(`Server is running on port 3000`);
-});
+module.exports = app; // Untuk Vercel, ekspor app tanpa listen
