@@ -40,6 +40,18 @@ app.post(`/webhook/${token}`, async (req, res) => {
       );
     }
 
+    // Jika pesan teks adalah "/clear"
+    if (update.message.text === '/clear') {
+      if (processingChats.has(chatId)) {
+        // Hentikan proses pengiriman terakhir
+        processingChats.delete(chatId);
+        await sendMessage(chatId, '✅ Pesan terakhir telah dihentikan. Tidak ada pending lagi.');
+      } else {
+        await sendMessage(chatId, '⚠️ Tidak ada proses yang sedang berjalan.');
+      }
+      return res.sendStatus(200);
+    }
+
     // Jika ada pesan dengan gambar
     if (update.message.photo) {
       // Cek apakah chat sedang diproses
@@ -136,4 +148,4 @@ async function setWebhook() {
 
 setWebhook();
 
-module.exports = app;
+module.exports = app; // Ekspor app untuk Vercel
