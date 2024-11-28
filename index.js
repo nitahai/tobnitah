@@ -86,10 +86,14 @@ app.post(`/webhook/${token}`, async (req, res) => {
           headers: form.getHeaders(),
         });
 
+        // Jika API mengembalikan 504, hentikan pengiriman pesan
         if (apiResponse.status === 504) {
-          // Jika API mengembalikan 504, beritahu pengguna
           console.error('Error 504: Gateway Timeout');
-          await sendMessage(chatId, 'Gagal memproses gambar. Silakan kirim foto soal yang lain.');
+          await sendMessage(chatId, 'Gagal memproses gambar karena server timeout. Proses dihentikan.');
+
+          // Hapus tanda chat dari processingChats
+          processingChats.delete(chatId);
+          return res.sendStatus(200); // Menghentikan pengolahan lebih lanjut
         } else if (apiResponse.ok) {
           const apiResult = await apiResponse.json();
           await sendMessage(chatId, apiResult.text || 'Gambar berhasil diproses!');
@@ -100,7 +104,7 @@ app.post(`/webhook/${token}`, async (req, res) => {
         console.error('Error:', error);
         await sendMessage(chatId, 'Gagal memproses gambar.');
       } finally {
-        // Hapus tanda chat dari processingChats
+        // Hapus tanda chat dari processingChats setelah selesai
         processingChats.delete(chatId);
       }
     }
@@ -148,4 +152,4 @@ async function setWebhook() {
 
 setWebhook();
 
-module.exports = app; // Ekspor app untuk Vercel
+module.exports = app; // Ekspor app untuk Vercel jika respon api asisten nya 504
