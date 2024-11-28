@@ -104,7 +104,7 @@ function generateRandomFilename() {
 
 // Mengatur webhook untuk bot Telegram
 async function setWebhook() {
-  const url = `https://botku-sigma.vercel.app/webhook/${token}`;  // Gantilah dengan URL endpoint webhook Anda
+  const url = `https://nitahbot.vercel.app/webhook/${token}`;  // Gantilah dengan URL endpoint webhook Anda
   try {
     const response = await fetch(`${telegramApiUrl}setWebhook?url=${url}`);
     const result = await response.json();
