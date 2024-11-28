@@ -6,93 +6,98 @@ const app = express();
 const token = '7580171291:AAFAD8UG0xhCVkfih4j072CEwvR_YCXlnhw';
 const telegramApiUrl = `https://api.telegram.org/bot${token}/`;
 
-app.use(express.json());
-
-// Simpan status pengolahan untuk setiap chatId
+// Flag untuk memastikan hanya satu proses pengiriman dalam satu waktu
 const processingChats = new Set();
+
+app.use(express.json());
 
 app.post(`/webhook/${token}`, async (req, res) => {
   const update = req.body;
 
-  if (update.message && update.message.text === '/start') {
-    const chatId = update.message.chat.id;
-    await sendMessage(chatId, 'Hallo pelajar, silahkan kirim foto pelajaran kamu!');
-  }
-
-  if (update.message && update.message.photo) {
+  if (update.message) {
     const chatId = update.message.chat.id;
 
-    // Jika sudah diproses, abaikan permintaan baru
-    if (processingChats.has(chatId)) {
-      return res.sendStatus(200);
+    // Jika pesan teks adalah "/start"
+    if (update.message.text === '/start') {
+      await sendMessage(chatId, 'Hallo pelajar, silahkan kirim foto pelajaran kamu!');
     }
 
-    // Tandai chat sebagai sedang diproses
-    processingChats.add(chatId);
-
-    const fileId = update.message.photo[update.message.photo.length - 1].file_id;
-
-    try {
-      await sendMessage(chatId, 'Sebentar, foto soal kamu sedang diproses mencari jawaban...');
-      const fileUrl = await getTelegramFileUrl(fileId);
-      const buffer = await fetch(fileUrl).then(res => res.buffer());
-      const randomFilename = generateRandomFilename();
-
-      const apiUrl = 'https://nitahai.vercel.app/asisten';
-      const form = new FormData();
-      form.append('file', buffer, {
-        filename: randomFilename,
-        contentType: 'image/jpeg'
-      });
-
-      const apiResponse = await fetch(apiUrl, {
-        method: 'POST',
-        body: form,
-        headers: form.getHeaders()
-      });
-
-      const apiResult = await apiResponse.json();
-
-      if (apiResult.ok) {
-        await sendMessage(chatId, apiResult.text || 'Gambar berhasil dikirim ke API!');
-      } else {
-        await sendMessage(chatId, 'Terjadi kesalahan saat mengirim gambar ke API roast.');
+    // Jika ada pesan dengan gambar
+    if (update.message.photo) {
+      // Cek apakah chat sedang diproses
+      if (processingChats.has(chatId)) {
+        console.log(`Chat ID ${chatId} sedang diproses, abaikan pengiriman ulang.`);
+        return res.sendStatus(200);
       }
-    } catch (error) {
-      console.error('Error:', error);
-      await sendMessage(chatId, 'Gagal mengirim gambar ke API.');
-    } finally {
-      // Hapus status pemrosesan untuk chat ini
-      processingChats.delete(chatId);
+
+      // Tandai chat sedang diproses
+      processingChats.add(chatId);
+
+      try {
+        // Kirim pesan sekali
+        await sendMessage(chatId, 'Sebentar, foto soal kamu sedang diproses mencari jawaban...');
+
+        const fileId = update.message.photo[update.message.photo.length - 1].file_id;
+        const fileUrl = await getTelegramFileUrl(fileId);
+
+        const buffer = await fetch(fileUrl).then(res => res.buffer());
+        const randomFilename = generateRandomFilename();
+
+        const form = new FormData();
+        form.append('file', buffer, {
+          filename: randomFilename,
+          contentType: 'image/jpeg',
+        });
+
+        const apiUrl = 'https://nitahai.vercel.app/asisten';
+        const apiResponse = await fetch(apiUrl, {
+          method: 'POST',
+          body: form,
+          headers: form.getHeaders(),
+        });
+
+        const apiResult = await apiResponse.json();
+
+        if (apiResult.ok) {
+          await sendMessage(chatId, apiResult.text || 'Gambar berhasil diproses!');
+        } else {
+          await sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        await sendMessage(chatId, 'Gagal memproses gambar.');
+      } finally {
+        // Hapus tanda chat dari processingChats
+        processingChats.delete(chatId);
+      }
     }
   }
 
   res.sendStatus(200);
 });
 
+// Fungsi untuk mendapatkan URL file gambar dari Telegram
 async function getTelegramFileUrl(fileId) {
   const response = await fetch(`${telegramApiUrl}getFile?file_id=${fileId}`);
   const data = await response.json();
   return `https://api.telegram.org/file/bot${token}/${data.result.file_path}`;
 }
 
+// Fungsi untuk mengirim pesan ke Telegram
 async function sendMessage(chatId, text) {
   await fetch(`${telegramApiUrl}sendMessage`, {
     method: 'POST',
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: text
-    }),
-    headers: {
-      'Content-Type': 'application/json'
-    }
+    body: JSON.stringify({ chat_id: chatId, text }),
+    headers: { 'Content-Type': 'application/json' },
   });
 }
 
+// Fungsi untuk menghasilkan nama file acak
 function generateRandomFilename() {
-  return 'id_' + Math.random().toString(36).substr(2, 9) + '.jpeg';
+  return 'id_' + Math.random().toString(36).substring(2, 9) + '.jpeg';
 }
 
+// Fungsi untuk mengatur webhook Telegram
 async function setWebhook() {
   const url = `https://nitahbot.vercel.app/webhook/${token}`;
   try {
@@ -110,6 +115,4 @@ async function setWebhook() {
 
 setWebhook();
 
-app.listen(3000, () => {
-  console.log(`Server is running on port 3000`);
-});
+module.exports = app; // Ekspor app untuk Vercel
