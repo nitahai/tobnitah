@@ -7,6 +7,14 @@ const app = express();
 const token = '8073266001:AAGq_Vmmpa0UWwoSLDKOkiRvxGK4dwd4uaA';
 const apiUrl = `https://api.telegram.org/bot${token}/`;
 
+// Fungsi untuk mengatur webhook Telegram
+async function setWebhook() {
+  const webhookUrl = 'https://nitahbot.vercel.app/api/telegram'; // URL aplikasi Vercel kamu
+  const response = await fetch(`${apiUrl}setWebhook?url=${webhookUrl}`);
+  const data = await response.json();
+  console.log('Webhook status:', data);
+}
+
 // Fungsi untuk mengirim pesan ke Telegram
 async function sendMessage(chatId, text) {
   const response = await fetch(`${apiUrl}sendMessage`, {
@@ -33,6 +41,7 @@ async function sendPhoto(chatId, file) {
 // Fungsi untuk memproses update yang masuk dari Telegram
 app.use(express.json());  // Middleware untuk menerima JSON body
 
+// Endpoint Webhook Telegram
 app.post('/api/telegram', async (req, res) => {
   const { message } = req.body;
 
@@ -96,3 +105,6 @@ app.post('/api/telegram', async (req, res) => {
 
 // Ekspor app untuk digunakan di Vercel (tanpa port)
 module.exports = app;
+
+// Panggil setWebhook() sekali saat aplikasi dimulai
+setWebhook();
