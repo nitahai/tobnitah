@@ -6,7 +6,9 @@ const app = express();
 const token = '8073266001:AAGq_Vmmpa0UWwoSLDKOkiRvxGK4dwd4uaA'; // Ganti dengan token bot kamu
 const telegramApiUrl = `https://api.telegram.org/bot${token}/`;
 
-// Flag untuk memastikan hanya satu proses pengiriman dalam satu waktu
+// Menggunakan objek untuk melacak status pesan yang sedang diproses
+const processingMessages = new Map(); // Map untuk menyimpan status setiap pesan berdasarkan chatId dan messageId
+
 app.use(express.json());
 
 app.post(`/webhook/${token}`, async (req, res) => {
@@ -14,87 +16,106 @@ app.post(`/webhook/${token}`, async (req, res) => {
 
   if (update.message) {
     const chatId = update.message.chat.id;
+    const messageId = update.message.message_id;
 
-    // Jika pesan teks adalah "/start"
+    // Cek apakah pesan baru adalah /start
     if (update.message.text === '/start') {
       await sendMessage(chatId, '👋 Hallo pelajar, Selamat datang di bot Nitah! Silahkan kirim foto soal pelajaran sekolah kamu');
     }
 
-    // Jika ada pesan teks dengan perintah "/stop" untuk menghentikan proses
+    // Cek apakah pesan baru adalah /stop
     if (update.message.text === '/stop') {
-      await sendMessage(chatId, '❌ Proses dihentikan. Kirim ulang foto soalmu jika perlu.');
-      return; // Menghentikan eksekusi lebih lanjut
+      // Hentikan proses pengiriman foto jika ada
+      if (processingMessages.has(chatId)) {
+        clearTimeout(processingMessages.get(chatId).timeout);
+        await sendMessage(chatId, '❌ Proses dihentikan. Kirim ulang foto soalmu jika perlu.');
+        processingMessages.delete(chatId); // Hapus status pengolahan
+      } else {
+        await sendMessage(chatId, 'Tidak ada proses yang sedang berjalan.');
+      }
+      return;
     }
 
-    // Jika ada pesan dengan gambar
+    // Proses pesan gambar (jika ada)
     if (update.message.photo) {
-      try {
-        // Dapatkan file_id gambar yang dikirim
-        const fileId = update.message.photo[update.message.photo.length - 1].file_id;
-
-        // Kirim pesan terlebih dahulu untuk memberitahu user bahwa proses sedang berjalan
-        await sendMessage(chatId, '✨ Sedang memproses gambar kamu, tunggu sebentar ya...');
-
-        // Mendapatkan URL file gambar dan mengirim pesan
-        const fileUrl = await getTelegramFileUrl(fileId);
-
-        if (!fileUrl) {
-          await sendMessage(chatId, 'Maaf, gambar tidak dapat diambil. Silakan kirim foto soal yang lain agar tidak terjadi pending.');
-          return; // Jika URL tidak ditemukan, hentikan proses
-        }
-
-        // Ambil gambar dari Telegram
-        const buffer = await fetch(fileUrl).then(res => res.buffer());
-        const randomFilename = generateRandomFilename();
-
-        // Persiapkan form-data untuk kirim gambar
-        const form = new FormData();
-        form.append('file', buffer, {
-          filename: randomFilename,
-          contentType: 'image/jpeg',
-        });
-
-        const apiUrl = 'https://nitahai.vercel.app/asisten';
-
-        // Set timeout untuk memeriksa jika bot tidak memberikan feedback dalam waktu 30 detik
-        const timeout = setTimeout(async () => {
-          await sendMessage(chatId, '⏰ Waktu habis! Gagal memproses gambar. Silahkan kirim ulang foto soalmu.');
-          await deleteMessage(chatId, update.message.message_id); // Menghapus pesan yang pending
-        }, 15000); // 15 detik
-
-        const apiResponse = await fetch(apiUrl, {
-          method: 'POST',
-          body: form,
-          headers: form.getHeaders(),
-        });
-
-        // Batalkan timeout jika proses selesai dalam waktu yang wajar
-        clearTimeout(timeout);
-
-        if (apiResponse.status === 504) {
-          // Menangani kesalahan 504 Gateway Timeout
-          await sendMessage(chatId, 'Terjadi kesalahan pada server, tidak dapat menghubungi asisten untuk memproses gambar. Silahkan kirim foto soal yang lain.');
-          await sendPhoto(chatId, 'https://img-9gag-fun.9cache.com/photo/ayNeMQb_460swp.webp'); // Ganti dengan URL gambar default jika diperlukan
-        } else {
-          const apiResult = await apiResponse.json();
-
-          // Kirim pesan untuk memberitahukan bahwa gambar sudah diproses
-          if (apiResult.ok) {
-            await sendMessage(chatId, '✨ Nitah udah beri jawabannya nih.');
-            await sendMessage(chatId, apiResult.text || 'Gambar berhasil diproses!');
-          } else {
-            await sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
-          }
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        await sendMessage(chatId, 'Gagal memproses gambar.');
-      }
+      await processImage(chatId, messageId, update.message.photo);
     }
   }
 
-  res.sendStatus(200);
+  res.sendStatus(200); // Mengirimkan status 200 OK ke Telegram API
 });
+
+async function processImage(chatId, messageId, photo) {
+  try {
+    // Menambahkan status pesan ke dalam Map agar dapat diproses secara independen
+    processingMessages.set(chatId, { messageId, timeout: null });
+
+    // Dapatkan file_id gambar yang dikirim
+    const fileId = photo[photo.length - 1].file_id;
+
+    // Kirim pesan terlebih dahulu untuk memberitahu user bahwa proses sedang berjalan
+    await sendMessage(chatId, '✨ Sedang memproses gambar kamu, tunggu sebentar ya...');
+
+    // Mendapatkan URL file gambar
+    const fileUrl = await getTelegramFileUrl(fileId);
+    if (!fileUrl) {
+      await sendMessage(chatId, 'Maaf, gambar tidak dapat diambil. Silakan kirim foto soal yang lain agar tidak terjadi pending.');
+      return;
+    }
+
+    // Ambil gambar dari Telegram
+    const buffer = await fetch(fileUrl).then(res => res.buffer());
+    const randomFilename = generateRandomFilename();
+
+    // Persiapkan form-data untuk kirim gambar
+    const form = new FormData();
+    form.append('file', buffer, {
+      filename: randomFilename,
+      contentType: 'image/jpeg',
+    });
+
+    const apiUrl = 'https://nitahai.vercel.app/asisten';
+
+    // Set timeout untuk memeriksa jika bot tidak memberikan feedback dalam waktu 30 detik
+    const timeout = setTimeout(async () => {
+      await sendMessage(chatId, '⏰ Waktu habis! Gagal memproses gambar. Silahkan kirim ulang foto soalmu.');
+      await deleteMessage(chatId, messageId); // Menghapus pesan yang pending
+      processingMessages.delete(chatId); // Hapus status pengolahan
+    }, 30000); // 30 detik
+
+    // Simulasi pengiriman gambar untuk diproses
+    const apiResponse = await fetch(apiUrl, {
+      method: 'POST',
+      body: form,
+      headers: form.getHeaders(),
+    });
+
+    // Batalkan timeout jika proses selesai dalam waktu yang wajar
+    clearTimeout(timeout);
+
+    if (apiResponse.status === 504) {
+      // Menangani kesalahan 504 Gateway Timeout
+      await sendMessage(chatId, 'Terjadi kesalahan pada server, tidak dapat menghubungi asisten untuk memproses gambar. Silahkan kirim foto soal yang lain.');
+      await sendPhoto(chatId, 'https://img-9gag-fun.9cache.com/photo/ayNeMQb_460swp.webp'); // Ganti dengan URL gambar default jika diperlukan
+    } else {
+      const apiResult = await apiResponse.json();
+
+      // Kirim pesan untuk memberitahukan bahwa gambar sudah diproses
+      if (apiResult.ok) {
+        await sendMessage(chatId, '✨ Nitah udah beri jawabannya nih.');
+        await sendMessage(chatId, apiResult.text || 'Gambar berhasil diproses!');
+      } else {
+        await sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
+      }
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    await sendMessage(chatId, 'Gagal memproses gambar.');
+  } finally {
+    // Menghapus status pesan setelah selesai
+    processingMessages.delete(chatId);
+  }
+}
 
 // Fungsi untuk mendapatkan URL file gambar dari Telegram
 async function getTelegramFileUrl(fileId) {
