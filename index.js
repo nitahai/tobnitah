@@ -20,6 +20,18 @@ app.post(`/webhook/${token}`, async (req, res) => {
       await sendMessage(chatId, '👋 Hallo pelajar, Selamat datang di bot Nitah! Silahkan kirim foto soal pelajaran sekolah kamu');
     }
 
+    // Jika pesan teks adalah "/informasi"
+    if (update.message.text === '/informasi') {
+      await sendMessage(chatId, 'Bot Nitah ini dirancang untuk membantu memproses gambar soal pelajaran sekolah kamu dan mencari jawaban dengan cepat. Cukup kirimkan gambar soalmu, dan Nitah akan memperoses untuk memberikan jawaban yang cepat dan tepat!');
+    }
+
+    // Jika pesan teks adalah "/tentang"
+    if (update.message.text === '/tentang') {
+      await sendMessage(chatId, 'Bot Nitah ini dibuat oleh Zakia dengan tujuan untuk membantu pelajar dalam menyelesaikan soal pelajaran secara cepat dan tepat. Cukup kirimkan foto soal, dan bot Nitah akan mencari jawaban untuk kamu.\n\n' +
+        'Untuk informasi lebih lanjut, kunjungi situs kami: 🌐 https://nitah.web.id\n' +
+        'Dukung kami melalui: ✨ https://saweria.co/zakiakaidzan');
+    }
+
     // Jika ada pesan dengan gambar
     if (update.message.photo) {
       try {
@@ -30,8 +42,8 @@ app.post(`/webhook/${token}`, async (req, res) => {
         const fileUrl = await getTelegramFileUrl(fileId);
 
         if (!fileUrl) {
-          await sendMessage(chatId, 'Maaf, gambar tidak dapat diambil. Silakan kirim foto soal yang lain agar tidak terjadi pending.');
-          return; // Jika URL tidak ditemukan, hentikan proses
+        await sendMessage(chatId, 'Maaf, gambar tidak dapat diambil. Silakan kirim foto soal yang lain agar tidak terjadi pending.');
+        return; // Jika URL tidak ditemukan, hentikan proses
         }
 
         // Mendapatkan informasi ukuran file gambar
@@ -71,7 +83,7 @@ app.post(`/webhook/${token}`, async (req, res) => {
           await sendPhoto(chatId, 'https://img-9gag-fun.9cache.com/photo/ayNeMQb_460swp.webp'); // Ganti dengan URL gambar default jika diperlukan
         } else {
           const apiResult = await apiResponse.json();
-
+          
           // Kirim pesan untuk memberitahukan bahwa gambar sudah diproses
           if (apiResult.ok) {
             await sendMessage(chatId, '✨ Nitah udah beri jawabannya nih.');
@@ -93,29 +105,20 @@ app.post(`/webhook/${token}`, async (req, res) => {
 // Fungsi untuk mendapatkan URL file gambar dari Telegram
 async function getTelegramFileUrl(fileId) {
   try {
+    // Kirim pesan ke pengguna untuk memberi tahu mereka bahwa gambar sedang diproses
+    
     const response = await fetch(`${telegramApiUrl}getFile?file_id=${fileId}`);
     const data = await response.json();
     
     if (data.ok) {
-      return `https://api.telegram.org/file/bot${token}/${data.result.file_path}`;
+    return `https://api.telegram.org/file/bot${token}/${data.result.file_path}`;
     } else {
       throw new Error('Error fetching file URL');
     }
   } catch (error) {
     console.error('Error:', error);
+    await sendMessage(chatId, 'Gagal mendapatkan gambar, coba kirimkan foto soal lagi.');
     return null;
-  }
-}
-
-// Fungsi untuk mendapatkan informasi file (termasuk ukuran) dari Telegram
-async function getFileInfo(fileUrl) {
-  try {
-    const response = await fetch(fileUrl);
-    const data = await response.buffer();
-    return { file_size: data.length };  // Kembalikan ukuran file dalam byte
-  } catch (error) {
-    console.error('Error getting file info:', error);
-    return { file_size: 0 };
   }
 }
 
