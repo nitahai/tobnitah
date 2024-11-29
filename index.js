@@ -39,7 +39,7 @@ app.post(`/webhook/${token}`, async (req, res) => {
         const fileId = update.message.photo[update.message.photo.length - 1].file_id;
 
         // Mendapatkan URL file gambar dan mengirim pesan
-        const fileUrl = await getTelegramFileUrl(fileId, chatId);
+        const fileUrl = await getTelegramFileUrl(fileId);
 
         if (!fileUrl) {
           return; // Jika URL tidak ditemukan, hentikan proses
@@ -89,7 +89,7 @@ app.post(`/webhook/${token}`, async (req, res) => {
 });
 
 // Fungsi untuk mendapatkan URL file gambar dari Telegram
-async function getTelegramFileUrl(fileId, chatId) {
+async function getTelegramFileUrl(fileId) {
   try {
     // Kirim pesan ke pengguna untuk memberi tahu mereka bahwa gambar sedang diproses
     
@@ -97,8 +97,7 @@ async function getTelegramFileUrl(fileId, chatId) {
     const data = await response.json();
     
     if (data.ok) {
-      await sendMessage(chatId, 'Tunggu foto soal pelajaran kamu sedang di cek...');
-      return `https://api.telegram.org/file/bot${token}/${data.result.file_path}`;
+    return `https://api.telegram.org/file/bot${token}/${data.result.file_path}`;
     } else {
       throw new Error('Error fetching file URL');
     }
