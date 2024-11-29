@@ -27,7 +27,7 @@ app.post(`/webhook/${token}`, async (req, res) => {
 
     // Jika pesan teks adalah "/tentang"
     if (update.message.text === '/tentang') {
-      await sendMessage(chatId, 'Bot Nitah ini dibuat oleh zakia dengan tujuan untuk membantu pelajar dalam menyelesaikan soal pelajaran secara cepat dan tepat. Cukup kirimkan foto soal, dan bot nitah akan mencari jawaban untuk kamu.\n\n' +
+      await sendMessage(chatId, 'Bot Nitah ini dibuat oleh Zakia dengan tujuan untuk membantu pelajar dalam menyelesaikan soal pelajaran secara cepat dan tepat. Cukup kirimkan foto soal, dan bot Nitah akan mencari jawaban untuk kamu.\n\n' +
         'Untuk informasi lebih lanjut, kunjungi situs kami: 🌐 https://nitah.web.id\n' +
         'Dukung kami melalui: ✨ https://saweria.co/zakiakaidzan');
     }
@@ -37,10 +37,14 @@ app.post(`/webhook/${token}`, async (req, res) => {
       try {
         // Dapatkan file_id gambar yang dikirim
         const fileId = update.message.photo[update.message.photo.length - 1].file_id;
-        const fileUrl = await getTelegramFileUrl(fileId);
 
-        await sendMessage(chatId, 'Tunggu sebentar foto soal pelajaran kamu sedang di cek..');
-        
+        // Mendapatkan URL file gambar dan mengirim pesan
+        const fileUrl = await getTelegramFileUrl(fileId, chatId);
+
+        if (!fileUrl) {
+          return; // Jika URL tidak ditemukan, hentikan proses
+        }
+
         // Ambil gambar dari Telegram
         const buffer = await fetch(fileUrl).then(res => res.buffer());
         const randomFilename = generateRandomFilename();
@@ -66,7 +70,7 @@ app.post(`/webhook/${token}`, async (req, res) => {
         } else {
           const apiResult = await apiResponse.json();
           
-          // Kirim pesan untuk memberitahukan bahwa gambar sedang diproses
+          // Kirim pesan untuk memberitahukan bahwa gambar sudah diproses
           if (apiResult.ok) {
             await sendMessage(chatId, '✨ Nitah udah beri jawabannya nih.');
             await sendMessage(chatId, apiResult.text || 'Gambar berhasil diproses!');
@@ -85,10 +89,24 @@ app.post(`/webhook/${token}`, async (req, res) => {
 });
 
 // Fungsi untuk mendapatkan URL file gambar dari Telegram
-async function getTelegramFileUrl(fileId) {
-  const response = await fetch(`${telegramApiUrl}getFile?file_id=${fileId}`);
-  const data = await response.json();
-  return `https://api.telegram.org/file/bot${token}/${data.result.file_path}`;
+async function getTelegramFileUrl(fileId, chatId) {
+  try {
+    // Kirim pesan ke pengguna untuk memberi tahu mereka bahwa gambar sedang diproses
+    await sendMessage(chatId, 'Tunggu foto soal pelajaran kamu sedang di cek...');
+
+    const response = await fetch(`${telegramApiUrl}getFile?file_id=${fileId}`);
+    const data = await response.json();
+    
+    if (data.ok) {
+      return `https://api.telegram.org/file/bot${token}/${data.result.file_path}`;
+    } else {
+      throw new Error('Error fetching file URL');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    await sendMessage(chatId, 'Gagal mendapatkan gambar, coba kirimkan foto soal lagi.');
+    return null;
+  }
 }
 
 // Fungsi untuk mengirim pesan ke Telegram
