@@ -34,6 +34,19 @@ app.post(`/webhook/${token}`, async (req, res) => {
           return; // Jika URL tidak ditemukan, hentikan proses
         }
 
+        // Mendapatkan informasi ukuran file gambar
+        const fileInfo = await getFileInfo(fileUrl);
+
+        // Memeriksa ukuran file (dalam byte)
+        const fileSize = fileInfo.file_size;
+        const minSize = 5000;  // 5 KB dalam byte
+        const maxSize = 6 * 1024 * 1024;  // 6 MB dalam byte
+
+        if (fileSize < minSize || fileSize > maxSize) {
+          await sendMessage(chatId, 'Ukuran foto kamu terlalu kecil atau terlalu besar. Maksimal foto yang bisa dikirim adalah 5KB hingga 6MB.');
+          return; // Jangan proses lebih lanjut jika ukuran tidak sesuai
+        }
+
         // Ambil gambar dari Telegram
         const buffer = await fetch(fileUrl).then(res => res.buffer());
         const randomFilename = generateRandomFilename();
@@ -91,6 +104,18 @@ async function getTelegramFileUrl(fileId) {
   } catch (error) {
     console.error('Error:', error);
     return null;
+  }
+}
+
+// Fungsi untuk mendapatkan informasi file (termasuk ukuran) dari Telegram
+async function getFileInfo(fileUrl) {
+  try {
+    const response = await fetch(fileUrl);
+    const data = await response.buffer();
+    return { file_size: data.length };  // Kembalikan ukuran file dalam byte
+  } catch (error) {
+    console.error('Error getting file info:', error);
+    return { file_size: 0 };
   }
 }
 
