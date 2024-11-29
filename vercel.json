@@ -8,7 +8,7 @@
   ],
   "routes": [
     {
-      "src": "/api/telegram",
+      "src": "/webhook/(.*)",
       "dest": "/index.js"
     }
   ]
