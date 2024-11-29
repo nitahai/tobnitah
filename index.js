@@ -20,62 +20,45 @@ app.post(`/webhook/${token}`, async (req, res) => {
       await sendMessage(chatId, '👋 Hallo pelajar, Selamat datang di bot Nitah! Silahkan kirim foto soal pelajaran sekolah kamu');
     }
 
-    // Jika pesan teks adalah "/informasi"
-    if (update.message.text === '/informasi') {
-      await sendMessage(chatId, 'Bot Nitah ini dirancang untuk membantu memproses gambar soal pelajaran sekolah kamu dan mencari jawaban dengan cepat. Cukup kirimkan gambar soalmu, dan Nitah akan memperoses untuk memberikan jawaban yang cepat dan tepat!');
-    }
-
-    // Jika pesan teks adalah "/tentang"
-    if (update.message.text === '/tentang') {
-      await sendMessage(chatId, 'Bot Nitah ini dibuat oleh Zakia dengan tujuan untuk membantu pelajar dalam menyelesaikan soal pelajaran secara cepat dan tepat. Cukup kirimkan foto soal, dan bot Nitah akan mencari jawaban untuk kamu.\n\n' +
-        'Untuk informasi lebih lanjut, kunjungi situs kami: 🌐 https://nitah.web.id\n' +
-        'Dukung kami melalui: ✨ https://saweria.co/zakiakaidzan');
-    }
-
     // Jika ada pesan dengan gambar
     if (update.message.photo) {
-      // Menangani pengolahan gambar secara terpisah agar tidak menunggu antrian
-      (async () => {
-        try {
-          const fileId = update.message.photo[update.message.photo.length - 1].file_id;
-          const fileUrl = await getTelegramFileUrl(fileId);
+      try {
+        // Dapatkan file_id gambar yang dikirim
+        const fileId = update.message.photo[update.message.photo.length - 1].file_id;
 
-          if (!fileUrl) {
-            await sendMessage(chatId, 'Maaf, gambar tidak dapat diambil. Silakan kirim foto soal yang lain agar tidak terjadi pending.');
-            return; // Jika URL tidak ditemukan, hentikan proses
-          }
+        // Mendapatkan URL file gambar dan mengirim pesan
+        const fileUrl = await getTelegramFileUrl(fileId);
 
-          // Ambil gambar dari Telegram
-          const buffer = await fetch(fileUrl).then(res => res.buffer());
-          const randomFilename = generateRandomFilename();
-
-          const form = new FormData();
-          form.append('file', buffer, { filename: randomFilename, contentType: 'image/jpeg' });
-
-          const apiUrl = 'https://nitahai.vercel.app/asisten';
-          const apiResponse = await fetch(apiUrl, {
-            method: 'POST',
-            body: form,
-            headers: form.getHeaders(),
-          });
-
-          if (apiResponse.status === 504) {
-            await sendMessage(chatId, 'Terjadi kesalahan pada server, tidak dapat menghubungi asisten untuk memproses gambar. Silakan kirim foto soal yang lain.');
-            await sendPhoto(chatId, 'https://img-9gag-fun.9cache.com/photo/ayNeMQb_460swp.webp'); // Ganti dengan URL gambar default jika diperlukan
-          } else {
-            const apiResult = await apiResponse.json();
-            if (apiResult.ok) {
-              await sendMessage(chatId, '✨ Nitah udah beri jawabannya nih.');
-              await sendMessage(chatId, apiResult.text || 'Gambar berhasil diproses!');
-            } else {
-              await sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
-            }
-          }
-        } catch (error) {
-          console.error('Error:', error);
-          await sendMessage(chatId, 'Gagal memproses gambar.');
+        if (!fileUrl) {
+          await sendMessage(chatId, 'Gagal mendapatkan gambar, coba kirimkan foto soal lagi.');
+          return; // Jika URL tidak ditemukan, hentikan proses
         }
-      })(); // Menjalankan proses ini secara terpisah untuk non-blocking
+
+        // Ambil gambar dari Telegram secara asinkron
+        const buffer = await fetch(fileUrl).then(res => res.buffer());
+        const randomFilename = generateRandomFilename();
+
+        // Persiapkan form-data untuk kirim gambar
+        const form = new FormData();
+        form.append('file', buffer, {
+          filename: randomFilename,
+          contentType: 'image/jpeg',
+        });
+
+        // Proses gambar ke API asisten secara asinkron
+        const apiResponse = await processImageWithApi(form, chatId);
+
+        if (apiResponse) {
+          // Jika respons dari API Asisten valid
+          await sendMessage(chatId, '✨ Nitah udah beri jawabannya nih.');
+          await sendMessage(chatId, apiResponse.text || 'Gambar berhasil diproses!');
+        } else {
+          await sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        await sendMessage(chatId, 'Gagal memproses gambar.');
+      }
     }
   }
 
@@ -99,20 +82,40 @@ async function getTelegramFileUrl(fileId) {
   }
 }
 
+// Fungsi untuk memproses gambar secara asinkron ke API Asisten
+async function processImageWithApi(form, chatId) {
+  try {
+    const apiUrl = 'https://nitahai.vercel.app/asisten';  // URL API Asisten Anda
+    const apiResponse = await fetch(apiUrl, {
+      method: 'POST',
+      body: form,
+      headers: form.getHeaders(),
+    });
+
+    if (apiResponse.status === 504) {
+      await sendMessage(chatId, 'Terjadi kesalahan pada server, tidak dapat menghubungi asisten untuk memproses gambar. Silakan kirim foto soal yang lain.');
+      return null;  // Menangani kesalahan 504
+    } else {
+      const apiResult = await apiResponse.json();
+      if (apiResult.ok) {
+        return apiResult;  // Mengembalikan hasil jika API berhasil
+      } else {
+        await sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
+        return null;  // Jika API gagal
+      }
+    }
+  } catch (error) {
+    console.error('API Error:', error);
+    await sendMessage(chatId, 'Gagal memproses gambar dengan API Asisten.');
+    return null;  // Menangani error saat mengakses API
+  }
+}
+
 // Fungsi untuk mengirim pesan ke Telegram
 async function sendMessage(chatId, text) {
   await fetch(`${telegramApiUrl}sendMessage`, {
     method: 'POST',
     body: JSON.stringify({ chat_id: chatId, text }),
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
-
-// Fungsi untuk mengirim foto ke Telegram
-async function sendPhoto(chatId, photoUrl) {
-  await fetch(`${telegramApiUrl}sendPhoto`, {
-    method: 'POST',
-    body: JSON.stringify({ chat_id: chatId, photo: photoUrl }),
     headers: { 'Content-Type': 'application/json' },
   });
 }
