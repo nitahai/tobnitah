@@ -26,6 +26,9 @@ app.post(`/webhook/${token}`, async (req, res) => {
         // Dapatkan file_id gambar yang dikirim
         const fileId = update.message.photo[update.message.photo.length - 1].file_id;
 
+        // Kirim pesan terlebih dahulu untuk memberitahu user bahwa proses sedang berjalan
+        sendMessage(chatId, '✨ Sedang memproses gambar kamu, tunggu sebentar ya...');
+
         // Mendapatkan URL file gambar dan mengirim pesan
         const fileUrl = await getTelegramFileUrl(fileId);
 
