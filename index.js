@@ -122,6 +122,18 @@ async function getTelegramFileUrl(fileId) {
   }
 }
 
+// Fungsi untuk mendapatkan informasi file (termasuk ukuran) dari Telegram
+async function getFileInfo(fileUrl) {
+  try {
+    const response = await fetch(fileUrl);
+    const data = await response.buffer();
+    return { file_size: data.length };  // Kembalikan ukuran file dalam byte
+  } catch (error) {
+    console.error('Error getting file info:', error);
+    return { file_size: 0 };
+  }
+}
+
 // Fungsi untuk mengirim pesan ke Telegram
 async function sendMessage(chatId, text) {
   await fetch(`${telegramApiUrl}sendMessage`, {
