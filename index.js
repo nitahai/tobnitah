@@ -6,6 +6,7 @@ const app = express();
 const token = '8073266001:AAGq_Vmmpa0UWwoSLDKOkiRvxGK4dwd4uaA'; // Ganti dengan token bot kamu
 const telegramApiUrl = `https://api.telegram.org/bot${token}/`;
 
+// Flag untuk memastikan hanya satu proses pengiriman dalam satu waktu
 app.use(express.json());
 
 app.post(`/webhook/${token}`, async (req, res) => {
@@ -16,19 +17,7 @@ app.post(`/webhook/${token}`, async (req, res) => {
 
     // Jika pesan teks adalah "/start"
     if (update.message.text === '/start') {
-      sendMessage(chatId, '👋 Hallo pelajar, Selamat datang di bot Nitah! Silahkan kirim foto soal pelajaran sekolah kamu');
-    }
-
-    // Jika pesan teks adalah "/informasi"
-    if (update.message.text === '/informasi') {
-      sendMessage(chatId, 'Bot Nitah ini dirancang untuk membantu memproses gambar soal pelajaran sekolah kamu dan mencari jawaban dengan cepat. Cukup kirimkan gambar soalmu, dan Nitah akan memperoses untuk memberikan jawaban yang cepat dan tepat!');
-    }
-
-    // Jika pesan teks adalah "/tentang"
-    if (update.message.text === '/tentang') {
-      sendMessage(chatId, 'Bot Nitah ini dibuat oleh Zakia dengan tujuan untuk membantu pelajar dalam menyelesaikan soal pelajaran secara cepat dan tepat. Cukup kirimkan foto soal, dan bot Nitah akan mencari jawaban untuk kamu.\n\n' +
-        'Untuk informasi lebih lanjut, kunjungi situs kami: 🌐 https://nitah.web.id\n' +
-        'Dukung kami melalui: ✨ https://saweria.co/zakiakaidzan');
+      await sendMessage(chatId, '👋 Hallo pelajar, Selamat datang di bot Nitah! Silahkan kirim foto soal pelajaran sekolah kamu');
     }
 
     // Jika ada pesan dengan gambar
@@ -41,7 +30,7 @@ app.post(`/webhook/${token}`, async (req, res) => {
         const fileUrl = await getTelegramFileUrl(fileId);
 
         if (!fileUrl) {
-          sendMessage(chatId, 'Maaf, gambar tidak dapat diambil. Silakan kirim foto soal yang lain agar tidak terjadi pending.');
+          await sendMessage(chatId, 'Maaf, gambar tidak dapat diambil. Silakan kirim foto soal yang lain agar tidak terjadi pending.');
           return; // Jika URL tidak ditemukan, hentikan proses
         }
 
@@ -65,22 +54,22 @@ app.post(`/webhook/${token}`, async (req, res) => {
 
         if (apiResponse.status === 504) {
           // Menangani kesalahan 504 Gateway Timeout
-          sendMessage(chatId, 'Terjadi kesalahan pada server, tidak dapat menghubungi asisten untuk memproses gambar. Silahkan kirim foto soal yang lain.');
-          sendPhoto(chatId, 'https://img-9gag-fun.9cache.com/photo/ayNeMQb_460swp.webp'); // Ganti dengan URL gambar default jika diperlukan
+          await sendMessage(chatId, 'Terjadi kesalahan pada server, tidak dapat menghubungi asisten untuk memproses gambar. Silahkan kirim foto soal yang lain.');
+          await sendPhoto(chatId, 'https://img-9gag-fun.9cache.com/photo/ayNeMQb_460swp.webp'); // Ganti dengan URL gambar default jika diperlukan
         } else {
           const apiResult = await apiResponse.json();
 
           // Kirim pesan untuk memberitahukan bahwa gambar sudah diproses
           if (apiResult.ok) {
-            sendMessage(chatId, '✨ Nitah udah beri jawabannya nih.');
-            sendMessage(chatId, apiResult.text || 'Gambar berhasil diproses!');
+            await sendMessage(chatId, '✨ Nitah udah beri jawabannya nih.');
+            await sendMessage(chatId, apiResult.text || 'Gambar berhasil diproses!');
           } else {
-            sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
+            await sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
           }
         }
       } catch (error) {
         console.error('Error:', error);
-        sendMessage(chatId, 'Gagal memproses gambar.');
+        await sendMessage(chatId, 'Gagal memproses gambar.');
       }
     }
   }
@@ -93,7 +82,7 @@ async function getTelegramFileUrl(fileId) {
   try {
     const response = await fetch(`${telegramApiUrl}getFile?file_id=${fileId}`);
     const data = await response.json();
-
+    
     if (data.ok) {
       return `https://api.telegram.org/file/bot${token}/${data.result.file_path}`;
     } else {
@@ -106,21 +95,21 @@ async function getTelegramFileUrl(fileId) {
 }
 
 // Fungsi untuk mengirim pesan ke Telegram
-function sendMessage(chatId, text) {
-  fetch(`${telegramApiUrl}sendMessage`, {
+async function sendMessage(chatId, text) {
+  await fetch(`${telegramApiUrl}sendMessage`, {
     method: 'POST',
     body: JSON.stringify({ chat_id: chatId, text }),
     headers: { 'Content-Type': 'application/json' },
-  }).catch((err) => console.error('Error sending message:', err)); // Catch error jika terjadi masalah dalam pengiriman pesan
+  });
 }
 
 // Fungsi untuk mengirim foto ke Telegram
-function sendPhoto(chatId, photoUrl) {
-  fetch(`${telegramApiUrl}sendPhoto`, {
+async function sendPhoto(chatId, photoUrl) {
+  await fetch(`${telegramApiUrl}sendPhoto`, {
     method: 'POST',
     body: JSON.stringify({ chat_id: chatId, photo: photoUrl }),
     headers: { 'Content-Type': 'application/json' },
-  }).catch((err) => console.error('Error sending photo:', err)); // Catch error jika terjadi masalah dalam pengiriman foto
+  });
 }
 
 // Fungsi untuk menghasilkan nama file acak
