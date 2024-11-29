@@ -63,29 +63,27 @@ app.post(`/webhook/${token}`, async (req, res) => {
           headers: form.getHeaders(),
         });
 
-        const apiResult = await apiResponse.json();
-
-        // Periksa jika respons mengandung kata "An error occurred with your deployment"
-        if (apiResult && apiResult.includes("An error occurred with your deployment")) {
+        const responseText = await apiResponse.text(); // Ambil respons sebagai teks
+        
+        if (responseText && responseText.includes("An error occurred with your deployment")) {
+          // Menangani kesalahan 504 Gateway Timeout
           await sendMessage(chatId, 'Terjadi kesalahan pada server, tidak dapat menghubungi asisten untuk memproses gambar. Silahkan kirim foto soal yang lain.');
           await sendPhoto(chatId, 'https://img-9gag-fun.9cache.com/photo/ayNeMQb_460swp.webp'); // Ganti dengan URL gambar default jika diperlukan
-        } else if (apiResponse.status === 504) {
-          await sendMessage(chatId, 'Terjadi kesalahan pada server, tidak dapat menghubungi asisten untuk memproses gambar. Silahkan kirim foto soal yang lain.');
-          await sendPhoto(chatId, 'https://img-9gag-fun.9cache.com/photo/ayNeMQb_460swp.webp'); // Ganti dengan URL gambar default jika diperlukan
-        } else if (apiResult.ok) {
-          // Kirim pesan untuk memberitahukan bahwa gambar sudah diproses
-          await sendMessage(chatId, '✨ Nitah udah beri jawabannya nih.');
-          await sendMessage(chatId, apiResult.text || 'Gambar berhasil diproses!');
         } else {
-          await sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
+          const apiResult = await apiResponse.json();
+          
+          // Kirim pesan untuk memberitahukan bahwa gambar sudah diproses
+          if (apiResult.ok) {
+            await sendMessage(chatId, '✨ Nitah udah beri jawabannya nih.');
+            await sendMessage(chatId, apiResult.text || 'Gambar berhasil diproses!');
+          } else {
+            await sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
+          }
         }
       } catch (error) {
         console.error('Error:', error);
         await sendMessage(chatId, 'Gagal memproses gambar.');
       }
-
-
-      
     }
   }
 
