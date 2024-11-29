@@ -1,97 +1,98 @@
 const fetch = require('node-fetch');
 const FormData = require('form-data');
-const { Telegraf } = require('telegraf'); // Menggunakan Telegraf untuk Bot Telegram
+const express = require('express');
+const app = express();
 
-const token = '8073266001:AAGq_Vmmpa0UWwoSLDKOkiRvxGK4dwd4uaA'; // Ganti dengan token bot Anda
-const bot = new Telegraf(token);
+// Token Telegram Bot
+const token = '8073266001:AAGq_Vmmpa0UWwoSLDKOkiRvxGK4dwd4uaA';
+const apiUrl = `https://api.telegram.org/bot${token}/`;
 
-let processingUser = null; // Menyimpan ID pengguna yang sedang diproses
-
-// Fungsi untuk mengirim pesan ke chat
+// Fungsi untuk mengirim pesan ke Telegram
 async function sendMessage(chatId, text) {
-  try {
-    await bot.telegram.sendMessage(chatId, text);
-  } catch (error) {
-    console.error('Error sending message:', error);
-  }
+  const response = await fetch(`${apiUrl}sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text: text }),
+  });
+  return response.json();
 }
 
-// Handler untuk /start
-bot.start(async (ctx) => {
-  await sendMessage(ctx.chat.id, 'Selamat datang! Kirimkan foto soal pelajaranmu, dan kami akan memprosesnya.');
-});
-
-// Handler untuk menerima gambar
-bot.on('photo', async (ctx) => {
-  const chatId = ctx.chat.id;
-  
-  // Mengecek apakah ada proses yang sedang berlangsung
-  if (processingUser !== null && processingUser !== chatId) {
-    return await sendMessage(chatId, 'Mohon tunggu, kami sedang memproses gambar dari pengguna lain.');
-  }
-
-  // Tandai bahwa pengguna sedang memproses gambar
-  processingUser = chatId;
-
-  // Ambil gambar dan ukurannya
-  const file = ctx.message.photo[ctx.message.photo.length - 1]; // Ambil gambar terbesar
-  const fileId = file.file_id;
-  
-  // Mengambil informasi file
-  const fileInfo = await bot.telegram.getFile(fileId);
-  const filePath = fileInfo.file_path;
-  const fileUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
-  
-  // Ambil ukuran gambar
-  const imageBuffer = await fetch(fileUrl).then(res => res.buffer());
-  const imageSize = imageBuffer.length;
-
-  // Cek ukuran gambar
-  if (imageSize < 10240 || imageSize > 6 * 1024 * 1024) {
-    processingUser = null; // Reset setelah memeriksa ukuran
-    return await sendMessage(chatId, 'Ukuran gambar harus antara 10KB dan 6MB.');
-  }
-
-  // Proses gambar
-  await sendMessage(chatId, 'Foto soal pelajaran kamu sedang kami proses...');
-
-  // Persiapkan form-data untuk kirim gambar
+// Fungsi untuk mengirim foto ke Telegram
+async function sendPhoto(chatId, file) {
   const form = new FormData();
-  const randomFilename = `image_${Date.now()}.jpg`;
-  form.append('file', imageBuffer, {
-    filename: randomFilename,
-    contentType: 'image/jpeg',
+  form.append('chat_id', chatId);
+  form.append('photo', file);
+
+  const response = await fetch(`${apiUrl}sendPhoto`, {
+    method: 'POST',
+    body: form,
   });
+  return response.json();
+}
 
-  const apiUrl = 'https://nitahai.vercel.app/asisten'; // Ganti dengan API yang sesuai
+// Fungsi untuk memproses update yang masuk dari Telegram
+app.use(express.json());  // Middleware untuk menerima JSON body
 
-  // Kirim gambar ke API untuk diproses
-  try {
-    const apiResponse = await fetch(apiUrl, {
-      method: 'POST',
-      body: form,
-      headers: form.getHeaders(),
-    });
+app.post('/api/telegram', async (req, res) => {
+  const { message } = req.body;
 
-    const apiResult = await apiResponse.json();
+  // Pastikan ada pesan dan ada file gambar
+  if (message) {
+    const { chat, photo, text } = message;
+    const chatId = chat.id;
 
-    // Kirim pesan ke pengguna jika gambar diproses dengan sukses
-    if (apiResult.ok) {
-      await sendMessage(chatId, '✨ Nitah udah beri jawabannya nih.');
-      await sendMessage(chatId, apiResult.text || 'Gambar berhasil diproses!');
-    } else {
-      await sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
+    if (text === '/start') {
+      // Kirim pesan saat user mengirim /start
+      await sendMessage(chatId, 'Halo! Kirim gambar untuk diproses!');
+      return res.sendStatus(200);
     }
-  } catch (error) {
-    console.error('Error processing image:', error);
-    await sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
-  } finally {
-    // Reset proses setelah selesai
-    processingUser = null;
+
+    if (photo) {
+      // Cek ukuran gambar
+      const fileId = photo[photo.length - 1].file_id;  // Ambil gambar dengan ukuran terbesar
+      const fileInfo = await fetch(`${apiUrl}getFile?file_id=${fileId}`).then(res => res.json());
+
+      const filePath = fileInfo.result.file_path;
+      const fileUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
+
+      // Ambil ukuran gambar
+      const imageBuffer = await fetch(fileUrl).then(res => res.buffer());
+      const imageSize = imageBuffer.length / 1024;  // Ukuran dalam KB
+
+      // Cek apakah ukuran gambar sesuai batas
+      if (imageSize >= 10 && imageSize <= 6000) {
+        // Proses gambar dan kirim pesan
+        await sendMessage(chatId, '📸 Gambar sedang kami proses...');
+        
+        // Simulasi mengirim gambar untuk diproses oleh API eksternal
+        const form = new FormData();
+        form.append('file', imageBuffer, { filename: 'image.jpg', contentType: 'image/jpeg' });
+        const apiResponse = await fetch('https://nitahai.vercel.app/asisten', {
+          method: 'POST',
+          body: form,
+          headers: form.getHeaders(),
+        });
+
+        const apiResult = await apiResponse.json();
+
+        if (apiResult.ok) {
+          await sendMessage(chatId, '✨ Gambar berhasil diproses!');
+        } else {
+          await sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
+        }
+      } else {
+        // Gambar terlalu besar atau kecil
+        await sendMessage(chatId, 'Gambar harus antara 10KB dan 6MB.');
+      }
+    } else {
+      // Pesan bukan gambar
+      await sendMessage(chatId, 'Silakan kirim gambar!');
+    }
   }
+
+  // Beri respons HTTP 200 agar Telegram mengetahui bahwa pesan diterima
+  res.sendStatus(200);
 });
 
-// Export bot sebagai app untuk Vercel
-module.exports = (req, res) => {
-  bot.handleUpdate(req.body, res); // Mengirimkan update dari Telegram API ke bot
-};
+// Ekspor app untuk digunakan di Vercel (tanpa port)
+module.exports = app;
