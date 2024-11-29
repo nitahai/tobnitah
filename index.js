@@ -27,7 +27,7 @@ app.post(`/webhook/${token}`, async (req, res) => {
         const fileId = update.message.photo[update.message.photo.length - 1].file_id;
 
         // Kirim pesan terlebih dahulu untuk memberitahu user bahwa proses sedang berjalan
-        sendMessage(chatId, '✨ Sedang memproses gambar kamu, tunggu sebentar ya...');
+        await sendMessage(chatId, '✨ Sedang memproses gambar kamu, tunggu sebentar ya...');
 
         // Mendapatkan URL file gambar dan mengirim pesan
         const fileUrl = await getTelegramFileUrl(fileId);
@@ -49,11 +49,20 @@ app.post(`/webhook/${token}`, async (req, res) => {
         });
 
         const apiUrl = 'https://nitahai.vercel.app/asisten';
+
+        // Set timeout untuk memeriksa jika bot tidak memberikan feedback dalam waktu 30 detik
+        const timeout = setTimeout(async () => {
+          await sendMessage(chatId, 'Silahkan kirim ulang foto soalmu.');
+        }, 15000); // 15 detik
+
         const apiResponse = await fetch(apiUrl, {
           method: 'POST',
           body: form,
           headers: form.getHeaders(),
         });
+
+        // Batalkan timeout jika proses selesai dalam waktu yang wajar
+        clearTimeout(timeout);
 
         if (apiResponse.status === 504) {
           // Menangani kesalahan 504 Gateway Timeout
