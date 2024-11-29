@@ -47,8 +47,7 @@ app.post(`/webhook/${token}`, async (req, res) => {
         // Persiapkan form-data untuk kirim gambar
         const form = new FormData();
         form.append('file', buffer, {
-          filename: randomFilename,
-          contentType: 'image/jpeg',
+          filename: randomFilename
         });
 
         const apiUrl = 'https://nitahai.vercel.app/asisten';
