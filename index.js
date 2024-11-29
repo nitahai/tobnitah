@@ -9,7 +9,7 @@ const telegramApiUrl = `https://api.telegram.org/bot${token}/`;
 // Flag untuk memastikan hanya satu proses pengiriman dalam satu waktu
 app.use(express.json());
 
-app.post(`/webhook/${token}`, (req, res) => {
+app.post(`/webhook/${token}`, async (req, res) => {
   const update = req.body;
 
   if (update.message) {
@@ -17,80 +17,60 @@ app.post(`/webhook/${token}`, (req, res) => {
 
     // Jika pesan teks adalah "/start"
     if (update.message.text === '/start') {
-      sendMessage(chatId, '👋 Hallo pelajar, Selamat datang di bot Nitah! Silahkan kirim foto soal pelajaran sekolah kamu');
+      await sendMessage(chatId, '👋 Hallo pelajar, Selamat datang di bot Nitah! Silahkan kirim foto soal pelajaran sekolah kamu');
     }
 
     // Jika ada pesan dengan gambar
     if (update.message.photo) {
-      // Dapatkan file_id gambar yang dikirim
-      const fileId = update.message.photo[update.message.photo.length - 1].file_id;
+      try {
+        // Dapatkan file_id gambar yang dikirim
+        const fileId = update.message.photo[update.message.photo.length - 1].file_id;
 
-      // Mendapatkan URL file gambar dan mengirim pesan
-      getTelegramFileUrl(fileId)
-        .then(fileUrl => {
-          if (!fileUrl) {
-            sendMessage(chatId, 'Maaf, gambar tidak dapat diambil. Silakan kirim foto soal yang lain agar tidak terjadi pending.');
-            return; // Jika URL tidak ditemukan, hentikan proses
-          }
+        // Mendapatkan URL file gambar dan mengirim pesan
+        const fileUrl = await getTelegramFileUrl(fileId);
 
-          // Mendapatkan informasi ukuran file gambar
-          return getFileInfo(fileUrl)
-            .then(fileInfo => {
-              const fileSize = fileInfo.file_size;
-              const minSize = 10 * 1024;  // 10 KB dalam byte
-              const maxSize = 6 * 1024 * 1024;  // 6 MB dalam byte
+        if (!fileUrl) {
+          await sendMessage(chatId, 'Maaf, gambar tidak dapat diambil. Silakan kirim foto soal yang lain agar tidak terjadi pending.');
+          return; // Jika URL tidak ditemukan, hentikan proses
+        }
 
-              if (fileSize < minSize || fileSize > maxSize) {
-                sendMessage(chatId, 'Ukuran foto kamu terlalu kecil atau terlalu besar. Maksimal foto yang bisa dikirim adalah 10KB hingga 6MB.');
-                return; // Jangan proses lebih lanjut jika ukuran tidak sesuai
-              }
+        // Ambil gambar dari Telegram
+        const buffer = await fetch(fileUrl).then(res => res.buffer());
+        const randomFilename = generateRandomFilename();
 
-              // Ambil gambar dari Telegram
-              return fetch(fileUrl)
-                .then(res => res.buffer())
-                .then(buffer => {
-                  const randomFilename = generateRandomFilename();
-
-                  // Persiapkan form-data untuk kirim gambar
-                  const form = new FormData();
-                  form.append('file', buffer, {
-                    filename: randomFilename,
-                    contentType: 'image/jpeg',
-                  });
-
-                  const apiUrl = 'https://nitahai.vercel.app/asisten';
-                  return fetch(apiUrl, {
-                    method: 'POST',
-                    body: form,
-                    headers: form.getHeaders(),
-                  });
-                })
-                .then(apiResponse => {
-                  if (apiResponse.status === 504) {
-                    sendMessage(chatId, 'Terjadi kesalahan pada server, tidak dapat menghubungi asisten untuk memproses gambar. Silahkan kirim foto soal yang lain.');
-                    sendPhoto(chatId, 'https://img-9gag-fun.9cache.com/photo/ayNeMQb_460swp.webp'); // Ganti dengan URL gambar default jika diperlukan
-                  } else {
-                    return apiResponse.json();
-                  }
-                })
-                .then(apiResult => {
-                  if (apiResult.ok) {
-                    sendMessage(chatId, '✨ Nitah udah beri jawabannya nih.');
-                    sendMessage(chatId, apiResult.text || 'Gambar berhasil diproses!');
-                  } else {
-                    sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
-                  }
-                })
-                .catch(error => {
-                  console.error('Error:', error);
-                  sendMessage(chatId, 'Gagal memproses gambar.');
-                });
-            });
-        })
-        .catch(error => {
-          console.error('Error fetching file URL:', error);
-          sendMessage(chatId, 'Gagal memproses gambar.');
+        // Persiapkan form-data untuk kirim gambar
+        const form = new FormData();
+        form.append('file', buffer, {
+          filename: randomFilename,
+          contentType: 'image/jpeg',
         });
+
+        const apiUrl = 'https://nitahai.vercel.app/asisten';
+        const apiResponse = await fetch(apiUrl, {
+          method: 'POST',
+          body: form,
+          headers: form.getHeaders(),
+        });
+
+        if (apiResponse.status === 504) {
+          // Menangani kesalahan 504 Gateway Timeout
+          await sendMessage(chatId, 'Terjadi kesalahan pada server, tidak dapat menghubungi asisten untuk memproses gambar. Silahkan kirim foto soal yang lain.');
+          await sendPhoto(chatId, 'https://img-9gag-fun.9cache.com/photo/ayNeMQb_460swp.webp'); // Ganti dengan URL gambar default jika diperlukan
+        } else {
+          const apiResult = await apiResponse.json();
+
+          // Kirim pesan untuk memberitahukan bahwa gambar sudah diproses
+          if (apiResult.ok) {
+            await sendMessage(chatId, '✨ Nitah udah beri jawabannya nih.');
+            await sendMessage(chatId, apiResult.text || 'Gambar berhasil diproses!');
+          } else {
+            await sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
+          }
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        await sendMessage(chatId, 'Gagal memproses gambar.');
+      }
     }
   }
 
@@ -98,49 +78,38 @@ app.post(`/webhook/${token}`, (req, res) => {
 });
 
 // Fungsi untuk mendapatkan URL file gambar dari Telegram
-function getTelegramFileUrl(fileId) {
-  return fetch(`${telegramApiUrl}getFile?file_id=${fileId}`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.ok) {
-        return `https://api.telegram.org/file/bot${token}/${data.result.file_path}`;
-      } else {
-        throw new Error('Error fetching file URL');
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      return null;
-    });
-}
-
-// Fungsi untuk mendapatkan informasi file (termasuk ukuran) dari Telegram
-function getFileInfo(fileUrl) {
-  return fetch(fileUrl)
-    .then(response => response.buffer())
-    .then(data => ({ file_size: data.length })) // Kembalikan ukuran file dalam byte
-    .catch(error => {
-      console.error('Error getting file info:', error);
-      return { file_size: 0 };
-    });
+async function getTelegramFileUrl(fileId) {
+  try {
+    const response = await fetch(`${telegramApiUrl}getFile?file_id=${fileId}`);
+    const data = await response.json();
+    
+    if (data.ok) {
+      return `https://api.telegram.org/file/bot${token}/${data.result.file_path}`;
+    } else {
+      throw new Error('Error fetching file URL');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    return null;
+  }
 }
 
 // Fungsi untuk mengirim pesan ke Telegram
-function sendMessage(chatId, text) {
-  fetch(`${telegramApiUrl}sendMessage`, {
+async function sendMessage(chatId, text) {
+  await fetch(`${telegramApiUrl}sendMessage`, {
     method: 'POST',
     body: JSON.stringify({ chat_id: chatId, text }),
     headers: { 'Content-Type': 'application/json' },
-  }).catch(error => console.error('Error sending message:', error));
+  });
 }
 
 // Fungsi untuk mengirim foto ke Telegram
-function sendPhoto(chatId, photoUrl) {
-  fetch(`${telegramApiUrl}sendPhoto`, {
+async function sendPhoto(chatId, photoUrl) {
+  await fetch(`${telegramApiUrl}sendPhoto`, {
     method: 'POST',
     body: JSON.stringify({ chat_id: chatId, photo: photoUrl }),
     headers: { 'Content-Type': 'application/json' },
-  }).catch(error => console.error('Error sending photo:', error));
+  });
 }
 
 // Fungsi untuk menghasilkan nama file acak
@@ -149,20 +118,19 @@ function generateRandomFilename() {
 }
 
 // Fungsi untuk mengatur webhook Telegram
-function setWebhook() {
+async function setWebhook() {
   const url = `https://nitahbot.vercel.app/webhook/${token}`; // Ganti dengan domain Vercel kamu
-  fetch(`${telegramApiUrl}setWebhook?url=${url}`)
-    .then(response => response.json())
-    .then(result => {
-      if (result.ok) {
-        console.log(`Webhook set to: ${url}`);
-      } else {
-        console.log('Webhook setup failed:', result.description);
-      }
-    })
-    .catch(error => {
-      console.error('Failed to set webhook:', error);
-    });
+  try {
+    const response = await fetch(`${telegramApiUrl}setWebhook?url=${url}`);
+    const result = await response.json();
+    if (result.ok) {
+      console.log(`Webhook set to: ${url}`);
+    } else {
+      console.log('Webhook setup failed:', result.description);
+    }
+  } catch (error) {
+    console.error('Failed to set webhook:', error);
+  }
 }
 
 setWebhook();
