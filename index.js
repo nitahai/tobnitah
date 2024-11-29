@@ -92,12 +92,12 @@ app.post(`/webhook/${token}`, async (req, res) => {
 async function getTelegramFileUrl(fileId, chatId) {
   try {
     // Kirim pesan ke pengguna untuk memberi tahu mereka bahwa gambar sedang diproses
-    await sendMessage(chatId, 'Tunggu foto soal pelajaran kamu sedang di cek...');
-
+    
     const response = await fetch(`${telegramApiUrl}getFile?file_id=${fileId}`);
     const data = await response.json();
     
     if (data.ok) {
+      await sendMessage(chatId, 'Tunggu foto soal pelajaran kamu sedang di cek...');
       return `https://api.telegram.org/file/bot${token}/${data.result.file_path}`;
     } else {
       throw new Error('Error fetching file URL');
