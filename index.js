@@ -39,6 +39,8 @@ app.post(`/webhook/${token}`, async (req, res) => {
         const fileId = update.message.photo[update.message.photo.length - 1].file_id;
         const fileUrl = await getTelegramFileUrl(fileId);
 
+        await sendMessage(chatId, 'Tunggu sebentar foto soal pelajaran kamu sedang di cek..');
+        
         // Ambil gambar dari Telegram
         const buffer = await fetch(fileUrl).then(res => res.buffer());
         const randomFilename = generateRandomFilename();
