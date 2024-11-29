@@ -27,7 +27,6 @@ app.post(`/webhook/${token}`, async (req, res) => {
     if (update.message.text === '/stop') {
       // Hentikan proses pengiriman foto jika ada
       if (processingMessages.has(chatId)) {
-        clearTimeout(processingMessages.get(chatId).timeout);
         await sendMessage(chatId, '❌ Proses dihentikan. Kirim ulang foto soalmu jika perlu.');
         processingMessages.delete(chatId); // Hapus status pengolahan
       } else {
@@ -48,7 +47,7 @@ app.post(`/webhook/${token}`, async (req, res) => {
 async function processImage(chatId, messageId, photo) {
   try {
     // Menambahkan status pesan ke dalam Map agar dapat diproses secara independen
-    processingMessages.set(chatId, { messageId, timeout: null });
+    processingMessages.set(chatId, { messageId });
 
     // Dapatkan file_id gambar yang dikirim
     const fileId = photo[photo.length - 1].file_id;
@@ -59,7 +58,7 @@ async function processImage(chatId, messageId, photo) {
     // Mendapatkan URL file gambar
     const fileUrl = await getTelegramFileUrl(fileId);
     if (!fileUrl) {
-      await sendMessage(chatId, 'Maaf, gambar tidak dapat diambil. Silakan kirim foto soal yang lain agar tidak terjadi pending.');
+      await sendMessage(chatId, 'Maaf, gambar tidak dapat diambil. Silakan kirim foto soal yang lain.');
       return;
     }
 
@@ -76,13 +75,6 @@ async function processImage(chatId, messageId, photo) {
 
     const apiUrl = 'https://nitahai.vercel.app/asisten';
 
-    // Set timeout untuk memeriksa jika bot tidak memberikan feedback dalam waktu 30 detik
-    const timeout = setTimeout(async () => {
-      await sendMessage(chatId, '⏰ Waktu habis! Gagal memproses gambar. Silahkan kirim ulang foto soalmu.');
-      await deleteMessage(chatId, messageId); // Menghapus pesan yang pending
-      processingMessages.delete(chatId); // Hapus status pengolahan
-    }, 30000); // 30 detik
-
     // Simulasi pengiriman gambar untuk diproses
     const apiResponse = await fetch(apiUrl, {
       method: 'POST',
@@ -90,9 +82,7 @@ async function processImage(chatId, messageId, photo) {
       headers: form.getHeaders(),
     });
 
-    // Batalkan timeout jika proses selesai dalam waktu yang wajar
-    clearTimeout(timeout);
-
+    // Tangani respon API
     if (apiResponse.status === 504) {
       // Menangani kesalahan 504 Gateway Timeout
       await sendMessage(chatId, 'Terjadi kesalahan pada server, tidak dapat menghubungi asisten untuk memproses gambar. Silahkan kirim foto soal yang lain.');
