@@ -24,7 +24,8 @@ app.post(`/webhook/${token}`, async (req, res) => {
 
     // Jika ada pesan dengan gambar
     if (update.message.photo) {
-      handleImage(update.message, chatId); // Tidak menunggu proses gambar sebelumnya selesai
+      // Proses gambar tanpa menunggu proses sebelumnya
+      handleImage(update.message, chatId);
     }
   }
 
@@ -33,11 +34,15 @@ app.post(`/webhook/${token}`, async (req, res) => {
 
 // Fungsi untuk mengirim pesan ke Telegram
 async function sendMessage(chatId, text) {
-  await fetch(`${telegramApiUrl}sendMessage`, {
-    method: 'POST',
-    body: JSON.stringify({ chat_id: chatId, text }),
-    headers: { 'Content-Type': 'application/json' },
-  });
+  try {
+    await fetch(`${telegramApiUrl}sendMessage`, {
+      method: 'POST',
+      body: JSON.stringify({ chat_id: chatId, text }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Error sending message:', error);
+  }
 }
 
 // Fungsi untuk menangani gambar yang dikirim oleh pengguna
@@ -61,16 +66,10 @@ async function handleImage(message, chatId) {
       contentType: 'image/jpeg',
     });
 
-    const apiResponse = await processImageWithApi(form, chatId); // Kirim gambar ke API untuk diproses
-
-    if (apiResponse) {
-      sendMessage(chatId, '✨ Nitah udah beri jawabannya nih.');
-      sendMessage(chatId, apiResponse.text || 'Gambar berhasil diproses!');
-    } else {
-      sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
-    }
+    // Proses gambar dengan API Asisten secara asinkron
+    processImageWithApi(form, chatId);
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error handling image:', error);
     sendMessage(chatId, 'Gagal memproses gambar.');
   }
 }
@@ -87,7 +86,7 @@ async function getTelegramFileUrl(fileId) {
       throw new Error('Error fetching file URL');
     }
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error fetching file URL:', error);
     return null;
   }
 }
@@ -106,15 +105,14 @@ async function processImageWithApi(form, chatId) {
     console.log('Hasil API:', apiResult);
 
     if (apiResult.ok) {
-      return apiResult;
+      sendMessage(chatId, '✨ Nitah udah beri jawabannya nih.');
+      sendMessage(chatId, apiResult.text || 'Gambar berhasil diproses!');
     } else {
-      await sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
-      return null;
+      sendMessage(chatId, 'Terjadi kesalahan saat memproses gambar.');
     }
   } catch (error) {
     console.error('API Error:', error);
-    await sendMessage(chatId, 'Gagal memproses gambar dengan API Asisten.');
-    return null;
+    sendMessage(chatId, 'Gagal memproses gambar dengan API Asisten.');
   }
 }
 
