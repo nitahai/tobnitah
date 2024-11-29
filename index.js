@@ -20,6 +20,12 @@ app.post(`/webhook/${token}`, async (req, res) => {
       await sendMessage(chatId, '👋 Hallo pelajar, Selamat datang di bot Nitah! Silahkan kirim foto soal pelajaran sekolah kamu');
     }
 
+    // Jika ada pesan teks dengan perintah "/stop" untuk menghentikan proses
+    if (update.message.text === '/stop') {
+      await sendMessage(chatId, '❌ Proses dihentikan. Kirim ulang foto soalmu jika perlu.');
+      return; // Menghentikan eksekusi lebih lanjut
+    }
+
     // Jika ada pesan dengan gambar
     if (update.message.photo) {
       try {
@@ -52,7 +58,8 @@ app.post(`/webhook/${token}`, async (req, res) => {
 
         // Set timeout untuk memeriksa jika bot tidak memberikan feedback dalam waktu 30 detik
         const timeout = setTimeout(async () => {
-          await sendMessage(chatId, 'Silahkan kirim ulang foto soalmu.');
+          await sendMessage(chatId, '⏰ Waktu habis! Gagal memproses gambar. Silahkan kirim ulang foto soalmu.');
+          await deleteMessage(chatId, update.message.message_id); // Menghapus pesan yang pending
         }, 15000); // 15 detik
 
         const apiResponse = await fetch(apiUrl, {
@@ -120,6 +127,15 @@ async function sendPhoto(chatId, photoUrl) {
   await fetch(`${telegramApiUrl}sendPhoto`, {
     method: 'POST',
     body: JSON.stringify({ chat_id: chatId, photo: photoUrl }),
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+// Fungsi untuk menghapus pesan di Telegram
+async function deleteMessage(chatId, messageId) {
+  await fetch(`${telegramApiUrl}deleteMessage`, {
+    method: 'POST',
+    body: JSON.stringify({ chat_id: chatId, message_id: messageId }),
     headers: { 'Content-Type': 'application/json' },
   });
 }
