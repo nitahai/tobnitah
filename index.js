@@ -39,11 +39,11 @@ app.post(`/webhook/${token}`, async (req, res) => {
 
         // Memeriksa ukuran file (dalam byte)
         const fileSize = fileInfo.file_size;
-        const minSize = 5000;  // 5 KB dalam byte
+        const minSize = 10 * 1024;  // 10 KB dalam byte
         const maxSize = 6 * 1024 * 1024;  // 6 MB dalam byte
 
         if (fileSize < minSize || fileSize > maxSize) {
-          await sendMessage(chatId, 'Ukuran foto kamu terlalu kecil atau terlalu besar. Maksimal foto yang bisa dikirim adalah 5KB hingga 6MB.');
+          await sendMessage(chatId, 'Ukuran foto kamu terlalu kecil atau terlalu besar. Maksimal foto yang bisa dikirim adalah 10KB hingga 6MB.');
           return; // Jangan proses lebih lanjut jika ukuran tidak sesuai
         }
 
