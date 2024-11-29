@@ -3,6 +3,9 @@ const fetch = require('node-fetch');
 const FormData = require('form-data');
 const app = express();
 
+// Middleware untuk memparsing body JSON
+app.use(express.json());
+
 const token = '8073266001:AAGq_Vmmpa0UWwoSLDKOkiRvxGK4dwd4uaA'; // Ganti dengan token bot kamu
 const telegramApiUrl = `https://api.telegram.org/bot${token}/`;
 
