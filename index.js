@@ -6,9 +6,9 @@ const app = express();
 const token = '8148039823:AAE44HD-zwusj7KPrBRzMVMPHdiftY12IY8'; // Ganti dengan token bot kamu
 const telegramApiUrl = `https://api.telegram.org/bot${token}/`;
 
-let pendingMessages = {}; // Menyimpan pesan yang sedang diproses berdasarkan chatId
-
 app.use(express.json());
+
+let pendingMessages = {}; // Menyimpan ID pesan yang masih pending
 
 app.post(`/webhook/${token}`, async (req, res) => {
   const update = req.body;
@@ -33,25 +33,19 @@ app.post(`/webhook/${token}`, async (req, res) => {
         'Dukung kami melalui: ✨ https://saweria.co/zakiakaidzan');
     }
 
+    // Jika pesan teks adalah "/hapussemuapesanpending"
+    if (update.message.text === '/hapuspending') {
+      // Menghapus semua pesan pending
+      for (const messageId in pendingMessages) {
+        await deleteMessage(chatId, pendingMessages[messageId]);
+      }
+      pendingMessages = {}; // Kosongkan daftar pesan pending
+      await sendMessage(chatId, 'Semua pesan pending telah dihapus.');
+    }
+
     // Jika ada pesan dengan gambar
     if (update.message.photo) {
       try {
-        // Cek apakah ada pesan pending dari chatId yang sama
-        if (pendingMessages[chatId]) {
-          // Jika ada pesan pending, kirim pesan peringatan
-          await sendMessage(chatId, 'Sedang memproses gambar sebelumnya, harap tunggu.');
-          return;
-        }
-
-        // Tandai pesan ini sebagai sedang diproses dan set timeout 1 menit
-        pendingMessages[chatId] = { status: 'pending' };
-        setTimeout(async () => {
-          if (pendingMessages[chatId] && pendingMessages[chatId].status === 'pending') {
-            delete pendingMessages[chatId]; // Hapus status pending setelah timeout
-            await sendMessage(chatId, 'Proses gambar terlalu lama, coba kirim ulang gambar.');
-          }
-        }, 60000); // 1 menit timeout
-
         // Dapatkan file_id gambar yang dikirim
         const fileId = update.message.photo[update.message.photo.length - 1].file_id;
         const fileUrl = await getTelegramFileUrl(fileId);
@@ -74,7 +68,7 @@ app.post(`/webhook/${token}`, async (req, res) => {
         });
 
         if (apiResponse.status === 504) {
-          // Menangani kesalahan 504 Gateway Timeout, stop proses
+          // Menangani kesalahan 504 Gateway Timeout
           await sendMessage(chatId, 'Terjadi kesalahan pada server, tidak dapat menghubungi asisten untuk memproses gambar. Silahkan kirim foto soal yang lain.');
           await sendPhoto(chatId, 'https://img-9gag-fun.9cache.com/photo/ayNeMQb_460swp.webp'); // Ganti dengan URL gambar default jika diperlukan
         } else {
@@ -91,11 +85,6 @@ app.post(`/webhook/${token}`, async (req, res) => {
       } catch (error) {
         console.error('Error:', error);
         await sendMessage(chatId, 'Gagal memproses gambar.');
-      } finally {
-        // Setelah selesai, hapus status pending
-        if (pendingMessages[chatId]) {
-          delete pendingMessages[chatId];
-        }
       }
     }
   }
@@ -124,6 +113,15 @@ async function sendPhoto(chatId, photoUrl) {
   await fetch(`${telegramApiUrl}sendPhoto`, {
     method: 'POST',
     body: JSON.stringify({ chat_id: chatId, photo: photoUrl }),
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+// Fungsi untuk menghapus pesan
+async function deleteMessage(chatId, messageId) {
+  await fetch(`${telegramApiUrl}deleteMessage`, {
+    method: 'POST',
+    body: JSON.stringify({ chat_id: chatId, message_id: messageId }),
     headers: { 'Content-Type': 'application/json' },
   });
 }
