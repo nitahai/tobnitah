@@ -6,6 +6,8 @@ const app = express();
 const token = '8148039823:AAE44HD-zwusj7KPrBRzMVMPHdiftY12IY8'; // Ganti dengan token bot kamu
 const telegramApiUrl = `https://api.telegram.org/bot${token}/`;
 
+let pendingMessages = {}; // Menyimpan pesan yang sedang diproses berdasarkan chatId
+
 app.use(express.json());
 
 app.post(`/webhook/${token}`, async (req, res) => {
@@ -34,6 +36,22 @@ app.post(`/webhook/${token}`, async (req, res) => {
     // Jika ada pesan dengan gambar
     if (update.message.photo) {
       try {
+        // Cek apakah ada pesan pending dari chatId yang sama
+        if (pendingMessages[chatId]) {
+          // Jika ada pesan pending, kirim pesan peringatan
+          await sendMessage(chatId, 'Sedang memproses gambar sebelumnya, harap tunggu.');
+          return;
+        }
+
+        // Tandai pesan ini sebagai sedang diproses dan set timeout 1 menit
+        pendingMessages[chatId] = { status: 'pending' };
+        setTimeout(async () => {
+          if (pendingMessages[chatId] && pendingMessages[chatId].status === 'pending') {
+            delete pendingMessages[chatId]; // Hapus status pending setelah timeout
+            await sendMessage(chatId, 'Proses gambar terlalu lama, coba kirim ulang gambar.');
+          }
+        }, 60000); // 1 menit timeout
+
         // Dapatkan file_id gambar yang dikirim
         const fileId = update.message.photo[update.message.photo.length - 1].file_id;
         const fileUrl = await getTelegramFileUrl(fileId);
@@ -59,7 +77,6 @@ app.post(`/webhook/${token}`, async (req, res) => {
           // Menangani kesalahan 504 Gateway Timeout, stop proses
           await sendMessage(chatId, 'Terjadi kesalahan pada server, tidak dapat menghubungi asisten untuk memproses gambar. Silahkan kirim foto soal yang lain.');
           await sendPhoto(chatId, 'https://img-9gag-fun.9cache.com/photo/ayNeMQb_460swp.webp'); // Ganti dengan URL gambar default jika diperlukan
-          return; // Stop proses lebih lanjut
         } else {
           const apiResult = await apiResponse.json();
           
@@ -74,6 +91,11 @@ app.post(`/webhook/${token}`, async (req, res) => {
       } catch (error) {
         console.error('Error:', error);
         await sendMessage(chatId, 'Gagal memproses gambar.');
+      } finally {
+        // Setelah selesai, hapus status pending
+        if (pendingMessages[chatId]) {
+          delete pendingMessages[chatId];
+        }
       }
     }
   }
