@@ -40,10 +40,13 @@ app.post(`/webhook/${token}`, async (req, res) => {
 
         // Ambil gambar dari Telegram
         const buffer = await fetch(fileUrl).then(res => res.buffer());
+        const randomFilename = generateRandomFilename();
 
-        // Persiapkan form-data untuk kirim gambar tanpa menyertakan filename
+        // Persiapkan form-data untuk kirim gambar
         const form = new FormData();
-        form.append('file', buffer); // Hanya file saja tanpa filename
+        form.append('file', buffer, {
+          filename: randomFilename
+        });
 
         const apiUrl = 'https://nitahai.vercel.app/asisten';
         const apiResponse = await fetch(apiUrl, {
@@ -102,6 +105,11 @@ async function sendPhoto(chatId, photoUrl) {
   });
 }
 
+// Fungsi untuk menghasilkan nama file acak
+function generateRandomFilename() {
+  return 'id_' + Math.random().toString(36).substring(2, 9) + '.jpg';
+}
+
 // Fungsi untuk mengatur webhook Telegram
 async function setWebhook() {
   const url = `https://nitahbot.vercel.app/webhook/${token}`; // Ganti dengan domain Vercel kamu
@@ -121,4 +129,3 @@ async function setWebhook() {
 setWebhook();
 
 module.exports = app; // Ekspor app untuk Vercel
-
