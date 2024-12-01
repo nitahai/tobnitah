@@ -3,7 +3,7 @@ const fetch = require('node-fetch');
 const FormData = require('form-data');
 const app = express();
 
-//const token = '7755272037:AAEOZ9e-3pC8y2SbSxLRXgMfp35F-aeo9EY'; // Ganti dengan token bot kamu
+const token = '8148039823:AAE44HD-zwusj7KPrBRzMVMPHdiftY12IY8'; // Ganti dengan token bot kamu
 const telegramApiUrl = `https://api.telegram.org/bot${token}/`;
 
 // Flag untuk memastikan hanya satu proses pengiriman dalam satu waktu
