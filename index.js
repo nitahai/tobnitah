@@ -56,9 +56,10 @@ app.post(`/webhook/${token}`, async (req, res) => {
         });
 
         if (apiResponse.status === 504) {
-          // Menangani kesalahan 504 Gateway Timeout
+          // Menangani kesalahan 504 Gateway Timeout, stop proses
           await sendMessage(chatId, 'Terjadi kesalahan pada server, tidak dapat menghubungi asisten untuk memproses gambar. Silahkan kirim foto soal yang lain.');
           await sendPhoto(chatId, 'https://img-9gag-fun.9cache.com/photo/ayNeMQb_460swp.webp'); // Ganti dengan URL gambar default jika diperlukan
+          return; // Stop proses lebih lanjut
         } else {
           const apiResult = await apiResponse.json();
           
