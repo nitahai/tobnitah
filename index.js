@@ -6,7 +6,6 @@ const app = express();
 const token = '8148039823:AAE44HD-zwusj7KPrBRzMVMPHdiftY12IY8'; // Ganti dengan token bot kamu
 const telegramApiUrl = `https://api.telegram.org/bot${token}/`;
 
-// Flag untuk memastikan hanya satu proses pengiriman dalam satu waktu
 app.use(express.json());
 
 app.post(`/webhook/${token}`, async (req, res) => {
@@ -39,16 +38,12 @@ app.post(`/webhook/${token}`, async (req, res) => {
         const fileId = update.message.photo[update.message.photo.length - 1].file_id;
         const fileUrl = await getTelegramFileUrl(fileId);
 
-         
         // Ambil gambar dari Telegram
         const buffer = await fetch(fileUrl).then(res => res.buffer());
-        const randomFilename = generateRandomFilename();
 
-        // Persiapkan form-data untuk kirim gambar
+        // Persiapkan form-data untuk kirim gambar tanpa menyertakan filename
         const form = new FormData();
-        form.append('file', buffer, {
-          filename: randomFilename
-        });
+        form.append('file', buffer); // Hanya file saja tanpa filename
 
         const apiUrl = 'https://nitahai.vercel.app/asisten';
         const apiResponse = await fetch(apiUrl, {
@@ -107,11 +102,6 @@ async function sendPhoto(chatId, photoUrl) {
   });
 }
 
-// Fungsi untuk menghasilkan nama file acak
-function generateRandomFilename() {
-  return 'id_' + Math.random().toString(36).substring(2, 9) + '.jpeg';
-}
-
 // Fungsi untuk mengatur webhook Telegram
 async function setWebhook() {
   const url = `https://nitahbot.vercel.app/webhook/${token}`; // Ganti dengan domain Vercel kamu
@@ -131,3 +121,4 @@ async function setWebhook() {
 setWebhook();
 
 module.exports = app; // Ekspor app untuk Vercel
+
